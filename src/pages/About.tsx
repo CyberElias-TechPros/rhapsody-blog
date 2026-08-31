@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { BookOpen, RefreshCw, Search, Shield } from "lucide-react";
+import { useSeo } from "@/hooks/useSeo";
 
 const features = [
   { icon: RefreshCw, title: "Auto-sync", desc: "We poll each Telegram channel and convert new messages into clean blog posts." },
@@ -8,7 +9,9 @@ const features = [
   { icon: Shield, title: "Faithful & safe", desc: "Content stays attributed to its source. We only mirror, never alter the message." },
 ];
 
-const About = () => (
+const About = () => {
+  useSeo({ title: "About", description: "How Meaning turns Telegram channels into a fast, searchable, beautiful blog — and what we deliberately don't do.", path: "/about" });
+  return (
   <div className="container py-20 max-w-4xl">
     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
       <span className="text-sm uppercase tracking-wider text-primary font-medium">About</span>
@@ -30,14 +33,24 @@ const About = () => (
           className="gradient-card rounded-2xl p-7 border border-border/60 shadow-soft"
         >
           <div className="grid place-items-center w-11 h-11 rounded-xl gradient-hero shadow-glow">
-            <f.icon className="w-5 h-5 text-primary-foreground" />
+            <f.icon className="w-5 h-5 text-primary-foreground" aria-hidden="true" />
           </div>
           <h3 className="font-serif text-2xl font-semibold mt-5">{f.title}</h3>
           <p className="text-muted-foreground mt-2 leading-relaxed">{f.desc}</p>
         </motion.div>
       ))}
     </div>
+
+    <div className="mt-14 rounded-2xl border border-border/60 bg-secondary/40 p-8 text-center">
+      <h2 className="font-serif text-2xl font-semibold">Ready when you are</h2>
+      <p className="text-muted-foreground mt-2 text-sm max-w-xl mx-auto">
+        Everything on this site is mirrored automatically from public Telegram channels by a Cloudflare Worker —
+        new messages become posts within ~15 minutes. No manual copy-paste, no expired links: images are
+        re-hosted so the archive outlives the feed.
+      </p>
+    </div>
   </div>
-);
+  );
+};
 
 export default About;
