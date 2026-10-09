@@ -1,53 +1,93 @@
-import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
-import { Search as SearchIcon } from "lucide-react";
-import { MOCK_POSTS } from "@/lib/mockPosts";
-import { PostCard } from "@/components/PostCard";
+import { useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { Search as SearchIcon, X } from 'lucide-react';
+import { api } from '@/lib/api';
+import { queryKeys } from '@/lib/queries';
+import { PostCard } from '@/components/PostCard';
+import { EmptyState, ErrorState, PageHeader, PostGridSkeleton } from '@/components/common/StateBlocks';
+import { useSeo } from '@/hooks/useSeo';
 
 const Search = () => {
+  useSeo({ title: 'Search', description: 'Full-text search across every synced devotional, teaching, book excerpt and music spotlight.', path: '/search', noindex: true });
   const [params, setParams] = useSearchParams();
-  const [q, setQ] = useState(params.get("q") ?? "");
+  const committed = (params.get('q') ?? '').trim();
+  const [q, setQ] = useState(committed);
 
-  useEffect(() => { setQ(params.get("q") ?? ""); }, [params]);
+  // URL is the source of truth (shareable links, back button); sync local input to it.
+  useEffect(() => setQ(committed), [committed]);
 
-  const results = useMemo(() => {
-    const term = q.trim().toLowerCase();
-    if (!term) return [];
-    return MOCK_POSTS.filter(p =>
-      p.title.toLowerCase().includes(term) ||
-      p.content.toLowerCase().includes(term) ||
-      p.tags.some(t => t.toLowerCase().includes(term)) ||
-      p.channelName.toLowerCase().includes(term)
-    );
-  }, [q]);
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      const next = (params.get('q') ?? '') === q.trim() ? null : q.trim();
+      const sp = new URLSearchParams(params);
+      if (next) sp.set('q', next);
+      else sp.delete('q');
+      if (sp.toString() !== params.toString()) setParams(sp, { replace: true });
+    }, 400);
+    return () => window.clearTimeout(t);
+  }, [q, params, setParams]);
+
+  const searchQuery = useQuery({
+    queryKey: queryKeys.posts({ q: committed || undefined, limit: 24, sort: 'new' }),
+    queryFn: ({ signal }) => api.posts.list({ q: committed || undefined, limit: 24, sort: 'new' }, signal),
+    enabled: committed.length > 0,
+    placeholderData: keepPreviousData,
+  });
 
   return (
     <div className="container py-16">
-      <h1 className="font-serif text-5xl md:text-6xl font-semibold text-balance">Search</h1>
+      <PageHeader title="Search" subtitle="Full-text search across titles, text and tags of every synced post." />
       <form
-        onSubmit={(e) => { e.preventDefault(); setParams(q ? { q } : {}); }}
+        onSubmit={(e) => {
+          e.preventDefault();
+          const sp = new URLSearchParams(params);
+          if (q.trim()) sp.set('q', q.trim());
+          else sp.delete('q');
+          setParams(sp);
+        }}
+        role="search"
         className="mt-8 relative max-w-2xl"
       >
-        <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+        <label htmlFor="site-search" className="sr-only">Search query</label>
+        <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" aria-hidden="true" />
         <input
+          id="site-search"
           autoFocus
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search devotionals, teachings, books..."
-          className="w-full pl-12 pr-5 py-4 rounded-2xl bg-card border border-border text-lg focus:outline-none focus:ring-2 focus:ring-primary/40 shadow-soft"
+          className="w-full pl-12 pr-12 py-4 rounded-2xl bg-card border border-border text-lg focus:outline-none focus:ring-2 focus:ring-primary/40 shadow-soft"
         />
+        {q && (
+          <button type="button" onClick={() => setQ('')} aria-label="Clear search" className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+            <X className="w-5 h-5" aria-hidden="true" />
+          </button>
+        )}
       </form>
 
-      <div className="mt-10">
-        {!q.trim() ? (
-          <p className="text-muted-foreground">Type something to begin searching.</p>
-        ) : results.length === 0 ? (
-          <p className="text-muted-foreground">No results for “{q}”.</p>
+      <div className="mt-10" aria-live="polite">
+        {!committed ? (
+          <EmptyState title="Start typing to search" hint="Try “faith”, “renewed mind”, or a channel name." />
+        ) : searchQuery.isPending ? (
+          <PostGridSkeleton />
+        ) : searchQuery.isError ? (
+          <ErrorState error={searchQuery.error} onRetry={() => searchQuery.refetch()} />
+        ) : searchQuery.data.items.length === 0 ? (
+          <EmptyState
+            title={`No results for “${committed}”`}
+            hint="Check the spelling, or browse all posts instead."
+            action={<Link to="/blog" className="text-primary underline underline-offset-4">Browse the blog</Link>}
+          />
         ) : (
           <>
-            <p className="text-sm text-muted-foreground mb-6">{results.length} result{results.length !== 1 && "s"}</p>
+            <p className="text-sm text-muted-foreground mb-6">
+              {searchQuery.data.total} result{searchQuery.data.total !== 1 && 's'} for “{committed}”
+            </p>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {results.map((p, i) => <PostCard key={p.id} post={p} index={i} />)}
+              {searchQuery.data.items.map((p, i) => (
+                <PostCard key={p.id} post={p} index={i} />
+              ))}
             </div>
           </>
         )}

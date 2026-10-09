@@ -1,0 +1,28 @@
+{
+  "name": "meaning-worker",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Cloudflare Worker backend for Meaning: API, auth, D1 data layer, Telegram sync, R2 media mirroring.",
+  "scripts": {
+    "dev": "wrangler dev --port 8787",
+    "deploy": "wrangler deploy",
+    "db:migrate:local": "wrangler d1 migrations apply meaning-db --local",
+    "db:migrate:remote": "wrangler d1 migrations apply meaning-db --remote",
+    "db:seed:local": "wrangler d1 execute meaning-db --local --file=./dev/seed_posts.sql",
+    "typecheck": "tsc --noEmit",
+    "check:ci": "wrangler deploy --dry-run",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "jose": "^6.2.10",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.22.0",
+    "@cloudflare/workers-types": "^5.20260831.1",
+    "typescript": "~5.9",
+    "vitest": "^4.1.11",
+    "wrangler": "^4.127.1"
+  }
+}

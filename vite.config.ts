@@ -1,22 +1,50 @@
 import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react-swc";
+import react from "@vitejs/plugin-react";
 import path from "path";
-import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
+export default defineConfig({
+  plugins: [react()],
   server: {
-    host: "::",
+    host: true,
     port: 8080,
-    hmr: {
-      overlay: false,
+    strictPort: false,
+    allowedHosts: true,
+    // In dev, same-origin /api keeps auth + CORS trivial; the Worker runs via
+    // `npm run worker:dev` (wrangler dev on :8787). In production the SPA is
+    // static on Vercel and VITE_API_URL points at the Worker directly.
+    proxy: {
+      "/api": {
+        target: "http://127.0.0.1:8787",
+        changeOrigin: true,
+      },
+      "/media": {
+        target: "http://127.0.0.1:8787",
+        changeOrigin: true,
+      },
+      "/sitemap.xml": {
+        target: "http://127.0.0.1:8787",
+        changeOrigin: true,
+      },
     },
   },
-  plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+  build: {
+    outDir: "dist",
+    sourcemap: false,
+    chunkSizeWarningLimit: 700,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ["react", "react-dom", "react-router-dom"],
+          query: ["@tanstack/react-query"],
+          animation: ["framer-motion"],
+        },
+      },
+    },
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
-    dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime", "@tanstack/react-query", "@tanstack/query-core"],
   },
-}));
+});

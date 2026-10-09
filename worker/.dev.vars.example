@@ -1,0 +1,23 @@
+# Copy to `.dev.vars` for local development (never commit .dev.vars).
+# In production set these with `wrangler secret put <NAME>`.
+
+# Secret used to sign JWTs. Generate with: openssl rand -base64 48
+JWT_SECRET=local-dev-only-secret-please-replace-with-at-least-32-bytes
+
+# Token lifetime (jose duration string), e.g. 12h, 7d
+JWT_EXPIRES_IN=7d
+
+# Bootstrap administrator — created on first run if no admin exists.
+# Leave ADMIN_PASSWORD unset to skip admin creation entirely.
+ADMIN_EMAIL=admin@meaning.app
+ADMIN_PASSWORD=ChangeMe!2025-Strong-Enough
+
+# Optional: public base URL for R2 media when served through a custom domain.
+# When unset, media is served from this Worker under /media/*.
+# MEDIA_PUBLIC_URL=https://media.example.com
+
+# Optional: API key for an outbound email provider used by the digest worker.
+# When unset, email delivery is disabled (subscribers are still stored).
+# EMAIL_API_URL=
+# EMAIL_API_KEY=
+# EMAIL_FROM="Meaning <no-reply@example.com>"

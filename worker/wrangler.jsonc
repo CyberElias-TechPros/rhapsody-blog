@@ -1,0 +1,42 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "meaning-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "logpush": false,
+  "observability": {
+    "enabled": true
+  },
+    "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "meaning-db",
+      "database_id": "local-dev",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "RATE_LIMITS",
+      "id": "local-dev-kv"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "MEDIA",
+      "bucket_name": "meaning-media"
+    }
+  ],
+  "triggers": {
+    "crons": ["*/15 * * * *"]
+  },
+  "vars": {
+    "ALLOWED_ORIGINS": "http://localhost:8080,https://meaning.vercel.app,*.vercel.app",
+    "SITE_URL": "https://meaning.vercel.app",
+    "MAX_UPLOAD_BYTES": "5242880"
+  },
+  "placement": {
+    "mode": "smart"
+  }
+}
