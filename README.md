@@ -1,227 +1,270 @@
-# Meaning — Telegram channels, reborn as a blog
+# Rhapsody Blog — the daily devotional, published as a blog
 
-**Meaning** mirrors public Telegram channels (Rhapsody of Realities, Pastor Chris, and friends),
-turns each message into a clean, searchable blog post, and serves it from a fully static React
-frontend. Content never rots: media is re-hosted, posts survive source-side edits, and the whole
-pipeline is automatic.
+Every day's article from the **Rhapsody of Realities** monthly editions — the message, the opening
+scripture, the closing prayer (or confession), further study and both Bible reading plans — published
+as its own permalink, searchable, shareable and readable in a feed app.
 
-- **Frontend** — Vite + React 18 + TypeScript + Tailwind/shadcn-ui, deployed on **Vercel**.
-- **Backend** — a single **Cloudflare Worker** API (`/worker`) on **D1** (SQLite), **KV** (rate limiting),
-  **R2** (media mirror) and **Cron triggers** (auto-sync every 15 min). No other cloud provider is used.
+> **Attribution.** Articles are taken from the *Rhapsody of Realities* monthly editions by
+> **Pastor Chris Oyakhilome**, © **LoveWorld Publishing** (ISSN 1596-6984). This project republishes
+> them with attribution on every page, in the RSS feed and in the article's structured data; all rights
+> remain with the publisher. Nothing here is an official LoveWorld property.
+
+The corpus currently spans **61 devotionals**: September 2026 (30 days) and October 2026 (31 days),
+about 20,500 words, extracted from the two PDF editions committed at the repo root.
+
+---
+
+## What this repository is
+
+Two independent halves that meet in the browser:
 
 ```
-┌────────────────────┐        HTTPS + Bearer JWT        ┌───────────────────────────────┐
-│  Vercel (static)   │ ───────────────────────────────▶ │  Cloudflare Worker  /api      │
-│  Vite + React SPA  │ ◀─────────────────────────────── │  D1 ─ KV ─ R2 ─ Cron ─ Cache  │
-└────────────────────┘        typed JSON + headers       └──────────────┬────────────────
-                                                                        │ HTMLRewriter (cf-cacheTtl)
-                                                                        ▼
-                                                            https://t.me/s/<channel>
+┌──────────────────────────────┐                    ┌────────────────────────────────┐
+│  Next.js 16 (App Router)     │                    │  Cloudflare Worker  /api       │
+│  ├ content/devotionals/*.md  │  ← the blog itself │  D1 · KV · R2 · Cron           │
+│  │  (static, build-time)     │                    │  accounts · admin · newsletter │
+│  └ prerendered to 77 pages   │ ─── Bearer JWT ──▶ │                                │
+└──────────────────────────────┘                    └────────────────────────────────┘
+        Vercel / any Node host                                Cloudflare
 ```
+
+- **The blog is static.** Posts are Markdown files read from disk at build time (`lib/content.ts`),
+  so every article is prerendered HTML — no database, no API call, no cold start between a reader
+  and the day's devotional.
+- **The Worker still owns accounts.** Login, registration, the account page, the admin console and
+  newsletter subscriptions all talk to the existing Cloudflare Worker API in `/worker`, unchanged.
+  Privileged actions are enforced there, never in the client.
+
+### Where the old app went
+
+The previous Vite + React 18 SPA ("Meaning", which mirrored Telegram channels) is preserved intact in
+[`legacy/`](legacy/) for reference — every page, component and test. It is excluded from the root
+`tsconfig.json` and ESLint config and is not built by any root script. See `legacy/README.md`.
+
+---
 
 ## Repository layout
 
 | Path | What it is |
 | --- | --- |
-| `src/` | React SPA (pages, components, typed API client, auth context, admin UI) |
-| `worker/` | Cloudflare Worker API — routes, D1 repos, services, Telegram sync, tests |
-| `worker/migrations/` | D1 SQL migrations (additive, reversible-by-design; run via wrangler) |
-| `vercel.json` | Vercel SPA rewrite + security headers + immutable asset caching |
-| `.github/workflows/ci.yml` | CI: typecheck, lint, unit + integration tests, builds |
+| `app/` | Next.js App Router: layouts, `sitemap.ts`, `robots.ts`, `feed.xml/route.ts`, and the sign-in/account/admin routes |
+| `app/(public)/` | Route group for the reading side of the site (home, library, editions, search, about) — and the only place the AdSense loader is rendered |
+| `components/` | UI: `layout/`, `common/`, `ui/` (shadcn-style primitives), `devotional/`, `search/`, `screens/` |
+| `lib/` | `content.ts` (Markdown → typed data), `search.ts`, `rss.ts`, `format.ts`, `site.ts`, `api.ts` (Worker client), `types.ts` |
+| `auth/` | `AuthProvider` (Worker JWT session) and `RequireRole` (client-side gate) |
+| `hooks/` | `useSavedPosts` — localStorage "my library", synced across tabs |
+| `lib/ads.ts`, `lib/security-headers.ts` | AdSense config (publisher id, slot ids, gating) and the response headers/CSP |
+| `content/devotionals/` | **The published posts.** 61 Markdown files, generated from the PDFs |
+| `scripts/extract-devotionals.mjs` | PDF → Markdown extractor, with a `--verify` self-check |
+| `tests/` | Vitest: extractor units, PDF↔Markdown coverage, content layer, search, format, RSS |
+| `worker/` | Cloudflare Worker API (routes, D1 repos, Telegram sync, own test suite) — unchanged |
+| `legacy/` | The previous Vite SPA, kept for reference |
+| `september-2026-rhapsody.pdf`, `october-2026-rhapsody.pdf` | The source editions |
+
+---
+
+## Routes
+
+| Route | Renders |
+| --- | --- |
+| `/` | Today's devotional as the hero (falls back to the newest day), edition strip, latest grid |
+| `/devotionals` | The library: JS-free filtering by edition, tag and text, with sort links and pagination |
+| `/devotionals/YYYY-MM-DD-slug` | One article — dated permalink, e.g. `/devotionals/2026-10-10-the-genius-of-christianity` |
+| `/editions` | Both monthly editions with counts and date ranges |
+| `/editions/2026-10` | One edition, day 1 first |
+| `/search` | Client-side search over a compact index (no round-trip); `?q=` is the source of truth |
+| `/about` | Why the site exists — getting the daily word to everyone — plus attribution and provenance |
+| `/feed.xml` | RSS 2.0 carrying each day's **complete** article |
+| `/sitemap.xml`, `/robots.txt`, `/ads.txt` | Generated from the corpus; `ads.txt` authorises Google AdSense |
+| `/login`, `/register` | Worker-backed auth screens |
+| `/account` | Saved devotionals (local, no account needed) + Worker profile, password and sessions |
+| `/admin` | Worker console: channel sync, post moderation, subscribers, users, audit log |
+
+An article page contains, in order: the headline and day, the opening scripture, the message with a
+drop cap, the closing prayer or confession, further study, the 1-Year and 2-Year Bible reading plans,
+tags, share/save actions, the source attribution (edition, PDF and page numbers), previous/next day
+navigation, and more from the same edition.
+
+---
+
+## The content pipeline
+
+The PDFs are the source of truth. Each day occupies a two-page spread whose layout is regular enough
+to parse precisely — but only by geometry, not by keywords.
+
+```bash
+npm run content:extract    # parse every PDF at the repo root → content/devotionals/*.md
+npm run content:verify     # same parse, assert every invariant, write nothing
+```
+
+The extractor (`scripts/extract-devotionals.mjs`) works from font size and position, because the
+printed text alone is ambiguous:
+
+- the date rule (`tuesday 1`), the all-caps headline, the opening scripture and the body are told
+  apart by type size (14pt / 16pt / 12pt / 12pt) and by left margin (55pt vs 41pt per page);
+- the **drop cap** is detected as an oversized single glyph whose baseline sits on the *second*
+  visual line — it belongs to the line above, and the line it rests on merely wraps around it, so its
+  extra indent must never be read as a new paragraph;
+- paragraph breaks come from the indent (margin + 22pt), not from vertical gaps, because leading is
+  identical inside and between paragraphs;
+- the right-hand page is split into message / prayer / further study / reading plans by the position
+  of the section labels, and the closing label is `PRAYER` on most days but `CONFESSION` on some;
+- running feet (folio, "order on rhapsodyofrealities.org", app adverts) are dropped by *shape* —
+  10pt-or-smaller type in the bottom band — because their wording changes between editions.
+
+Each post's frontmatter keeps its provenance: the headline exactly as printed (`titleOriginal`), the
+source PDF and the two page numbers it came from, the printed weekday, and the closing label.
+
+### Publishing a new month
+
+1. Drop `<month>-<year>-rhapsody.pdf` at the repo root (the extractor discovers every PDF there).
+2. `npm run content:extract` — it writes that month's posts and removes only that month's stale files,
+   so re-running is idempotent.
+3. `npm test` — the freshness gate fails if the committed Markdown and the PDFs disagree.
+4. Commit the new `content/devotionals/*.md` files. No code changes are needed: routes, sitemap,
+   feed and editions all derive from the directory.
+
+---
+
+## Advertising
+
+Google AdSense is wired in two layers, and both are off in development by default.
+
+1. **Auto ads.** `components/common/AdScript.tsx` renders Google's snippet
+   (`adsbygoogle.js?client=ca-pub-9117572925263537`) as a real `<script async>`, so it is present in
+   the **served HTML** — that is what AdSense checks when it verifies a domain, and what Auto ads need
+   to place units. It is deliberately *not* `next/script`: `afterInteractive` only emits a
+   `<link rel="preload">` server-side and injects the tag after hydration, and Next's
+   `data-nscript` attribute makes AdSense's loader log `AdSense head tag doesn't support
+   data-nscript attribute`. React 19 hoists the plain `async` script into `<head>` and de-duplicates
+   it by `src`; `tests/ads.test.tsx` fails if that regresses.
+
+   The loader is rendered from **`app/(public)/layout.tsx`**, not the root layout, so it never loads
+   on `/login`, `/register`, `/account` or `/admin` — Auto ads cannot place a unit on a page that
+   never receives the script. Those routes sit directly under `app/`, outside the group.
+2. **Hand-placed units.** `components/common/AdSlot.tsx` renders the standard `ins.adsbygoogle`
+   element and queues one fill per element. Positions are configured in `lib/ads.ts`:
+
+| Position | Where it appears | Slot env var |
+| --- | --- | --- |
+| `feed` | In the card grids — home ("Latest", mid-grid), `/devotionals` and `/editions/<slug>` every 6 cards, search results below the list | `NEXT_PUBLIC_ADSENSE_SLOT_FEED` |
+| `article` | Below the devotional on `/devotionals/<slug>`: after the reading plans and source attribution (before the previous/next day links), and after "More from this edition" | `NEXT_PUBLIC_ADSENSE_SLOT_ARTICLE` |
+| `page` | Bottom of `/about`, before the closing call to action | `NEXT_PUBLIC_ADSENSE_SLOT_PAGE` |
+
+**Nothing is placed inside a devotional.** The sequence scripture → message → prayer/confession →
+further study → reading plans is never interrupted, and no ad appears on `/login`, `/register`,
+`/account`, `/admin` (outside the public group entirely), in the RSS feed, or on a "no results"
+screen. `tests/ads.test.tsx` asserts
+this against the route sources, so a careless edit fails CI rather than quietly degrading the
+reading experience.
+
+Each unit reserves its height, so a filling ad cannot shift the reading plans or the day links
+(Core Web Vitals), and it is labelled "Advertisement" to keep it visually separate from editorial
+content. Until a slot id exists for a position, that position renders nothing at all — no empty box.
+
+To go live, create three responsive ad units in AdSense and set the `NEXT_PUBLIC_ADSENSE_SLOT_*`
+variables (see `.env.example`). `public/ads.txt` already authorises `pub-9117572925263537`; AdSense
+flags a domain as "needs attention" without it.
+
+The CSP in `lib/security-headers.ts` allows the AdSense origins in `script-src` and the creative
+iframes in `frame-src`. Google adds hosts from time to time — if the console reports a violation
+for an ad script, add that origin to `AD_SCRIPT_ORIGINS` rather than loosening the directive.
+
+To preview placements locally:
+
+```bash
+NEXT_PUBLIC_ADS_ENABLED=true NEXT_PUBLIC_ADSENSE_SLOT_FEED=1234567890 npm run dev
+```
+
+---
+
+## Tests
+
+```bash
+npm test          # 116 tests
+npm run typecheck
+npm run lint
+```
+
+| File | What it guarantees |
+| --- | --- |
+| `tests/extractor.test.ts` | Title casing, slug generation, excerpt cutting, drop-cap spacing rules |
+| `tests/content-extraction.test.ts` | **The contract with the PDFs**: every day extracted, dates consecutive, printed weekday matching the calendar, all per-day invariants, *no printed line of any spread dropped*, and the committed Markdown byte-for-byte in sync with what the extractor produces |
+| `tests/content.test.ts` | The content layer as the routes see it: ordering, editions, adjacency, hero fallback, filtering, pagination, search index, stats |
+| `tests/search.test.ts` | Tokenising and field-weighted ranking |
+| `tests/format.test.ts` | Date and count formatting — never an "Invalid Date" in a page |
+| `tests/rss.test.ts` | A complete article per item, XML escaping, well-formed feed |
+| `tests/ads.test.tsx` | AdSense config and gating, the CSP's ad origins, `ads.txt`, the rendered `ins.adsbygoogle` unit, and the placement policy |
+
+The coverage check is the one that matters: it re-reads both PDFs, rebuilds every visual line of
+every spread, and asserts that each line of real content appears in the extracted fields — allowing
+a drop-cap line to match once the cap glyph is split back off. Roughly 3,100 printed lines are
+checked; a parsing regression cannot slip through silently.
+
+---
 
 ## Local development
 
-Prereqs: **Node 22+**, npm ≥ 10, and an internet connection for optional live Telegram sync.
+Prereqs: **Node 22+** and npm ≥ 10.
 
 ```bash
-# 1. install both workspaces
 npm install
+cp .env.example .env.local
+npm run dev            # http://localhost:3000 — the blog works with no Worker running
+```
+
+To exercise login, registration, the account page, the admin console or the newsletter form, run the
+Worker alongside the frontend:
+
+```bash
 npm --prefix worker install
-
-# 2. terminal A — Worker API on http://127.0.0.1:8787 (local D1/KV/R2 emulation)
-cd worker
-cp .dev.vars.example .dev.vars      # then set JWT_SECRET to any random string
-npx wrangler d1 executions apply --local --file migrations/0001_init.sql   # or: npx wrangler d1 migrations apply DB --local
-npx wrangler dev                    # (npm run dev)
-
-# 3. terminal B — frontend on http://localhost:8080
-npm run dev                         # Vite proxies /api, /media and /sitemap.xml to :8787
+npm --prefix worker run db:migrate:local
+npm run worker:dev                                    # wrangler on :8787
+WORKER_DEV_URL=http://127.0.0.1:8787 npm run dev      # Next rewrites /api/* and /media/* to it
 ```
 
-To seed an admin account you can either set `ADMIN_EMAIL`/`ADMIN_PASSWORD` in `worker/.dev.vars`
-(bootstrap creates it on first sync/run), or register via the UI and run:
+The rewrite exists so the browser keeps talking to a single origin in development; in production set
+`NEXT_PUBLIC_API_URL` to the deployed Worker instead.
 
-```bash
-npx wrangler d1 execute DB --local --command \
-  "UPDATE users SET role='admin' WHERE email='you@example.com'"
-```
+| Variable | Purpose |
+| --- | --- |
+| `NEXT_PUBLIC_SITE_URL` | Canonical origin for `og:url`, canonicals, `sitemap.xml` and the feed |
+| `NEXT_PUBLIC_API_URL` | Deployed Worker API base, including `/api` |
+| `WORKER_DEV_URL` | Dev only — same-origin rewrites to a local `wrangler dev` |
+| `NEXT_PUBLIC_ADSENSE_CLIENT`, `NEXT_PUBLIC_ADSENSE_SLOT_*`, `NEXT_PUBLIC_ADS_ENABLED` | AdSense publisher id, per-position slot ids, and an on/off override |
 
-``worker/dev/seed_posts.sql` is a **dev-only** fixture (a few sample posts) — never point it at
-production; production content comes from the real Telegram sync.
+The JWT lives in `localStorage['meaning.auth.token']` (the key is unchanged, so an existing Worker
+session keeps working). A `401` dispatches a `meaning:unauthorized` event, which the auth provider
+turns into a signed-out state everywhere.
 
-### Quality gates
+---
 
-```bash
-npm run typecheck && npm run lint && npm test && npm run build   # frontend
-cd worker && npm run typecheck && npm test                        # worker (74 integration tests, miniflare)
-npx wrangler deploy --dry-run                                     # bundle + config validation
-```
+## Deployment
 
-## Environment variables
+**Frontend** — Vercel (or any Node host): `npm run build && npm start`. Set `NEXT_PUBLIC_SITE_URL`
+and `NEXT_PUBLIC_API_URL`. The build prerenders the whole corpus; `dynamicParams = false` on the
+article and edition routes means an unknown slug is a clean 404 rather than a server render.
 
-### Frontend (Vercel project → Settings → Environment Variables)
+**Worker** — `npm run worker:deploy` (wrangler). D1 migrations, KV, R2 and the cron trigger are
+configured inside `/worker` exactly as before.
 
-| Variable | Example | Notes |
-| --- | --- | --- |
-| `VITE_API_URL` | `https://meaning-api.<sub>.workers.dev/api` | Leave unset in dev (Vite proxy handles it). |
-| `VITE_SITE_URL` | `https://meaning.vercel.app` | Canonical origin used for `rel=canonical` / Open Graph URLs. |
+Two things worth knowing:
 
-### Worker (`worker/.dev.vars` locally; `wrangler secret put` in production)
+- **Security headers** are applied in `next.config.ts` (carried over from the old `vercel.json`):
+  HSTS, `X-Frame-Options: DENY`, `nosniff`, referrer and permissions policies, plus a CSP. The CSP
+  keeps `'unsafe-inline'` for scripts and styles because the App Router emits inline RSC and
+  hydration scripts; tightening it to nonces means generating them per request in a `proxy.ts` and
+  threading them through the metadata API — deliberate work, not a config flag.
+- **Fonts and OG images are runtime/static.** `next/font/google` fetches font files at build time,
+  which fails in offline builds, so the root layout links Google Fonts with `preconnect` and the
+  Tailwind stacks fall back to Georgia/system-ui. Open Graph uses a static `public/og.jpg` rather
+  than `next/og`, which needs font binaries at build time.
 
-| Name | Kind | Notes |
-| --- | --- | --- |
-| `JWT_SECRET` | secret (string, ≥32 chars) | HS256 signing key for auth tokens **and** newsletter unsubscribe HMAC. Rotating it invalidates all sessions and unsubscribe links. |
-| `ADMIN_EMAIL`, `ADMIN_PASSWORD` | secrets (optional) | Bootstrap admin — created once on boot if users table is empty. Remove after first login or keep for local convenience. |
-| `MEDIA_PUBLIC_URL` | var (optional) | Custom domain/CDN prefix for R2 media; unset → media streams through `/media/*` on the Worker. |
-| `ALLOWED_ORIGINS` | var | Comma-separated CORS allowlist (`*.vercel.app` wildcard supported for previews). |
-| `SITE_URL` | var | Used in sitemap.xml URLs. |
-| `MAX_UPLOAD_BYTES` | var | Upload guard for media mirroring. |
+---
 
-## Production deployment
+## Licence and rights
 
-### 1. Cloudflare (backend)
-
-```bash
-cd worker
-npm install
-
-# D1 database
-npx wrangler d1 create meaning-db
-#   → copy the printed database_id into wrangler.jsonc (d1_databases[0].database_id)
-npx wrangler d1 migrations apply DB --remote
-
-# KV namespace for rate limiting
-npx wrangler kv namespace create RATE_LIMITS
-#   → copy the id into wrangler.jsonc (kv_namespaces[0].id)
-
-# R2 bucket for mirrored media
-npx wrangler r2 bucket create meaning-media
-#   → bucket_name in wrangler.jsonc is already "meaning-media"
-
-# Secrets
-openssl rand -hex 32 | pbcopy          # or any 32+ char random secret
-npx wrangler secret put JWT_SECRET     # paste it
-npx wrangler secret put ADMIN_EMAIL    # optional bootstrap admin
-npx wrangler secret put ADMIN_PASSWORD # optional bootstrap admin
-
-# Deploy (cron trigger `*/15 * * * *` ships from wrangler.jsonc)
-npx wrangler deploy
-```
-
-Then set `vars.ALLOWED_ORIGINS` to include your Vercel origin (the current value already covers
-`meaning.vercel.app` + all `*.vercel.app` previews), and optionally bind a custom domain:
-Workers Docs → *Custom domain* → e.g. `api.yourdomain.com`.
-
-**Rate limiting hardening (recommended):** KV fixed-window limiting is the baseline; for volume
-protection add a Cloudflare WAF rate-limit rule (free tier) on `/*api/auth*` and `/api/posts*`.
-The Worker also degrades **open** if KV errors — availability over strictness — which is exactly
-why the edge rule matters.
-
-### 2. Vercel (frontend)
-
-1. Import the GitHub repo (root). Framework preset: **Vite**. Build command `npm run build`,
-   output `dist` — both already declared in `vercel.json`.
-2. Add env vars `VITE_API_URL` and `VITE_SITE_URL` (Production + Preview).
-3. Deploy. Vercel serves the SPA with SPA rewrites + security headers (CSP, HSTS, nosniff,
-   frame-ancestors…) from `vercel.json`; hashed `/assets/*` are `immutable`.
-4. Update `public/robots.txt`'s `Sitemap:` line to the Worker origin.
-
-### First content
-
-Hit `POST /api/admin/sync` from the admin dashboard (or `npx wrangler cron "*/15 * * * *" --test`
-for a remote sync run). The cron trigger keeps it flowing every 15 minutes from then on.
-
-## Architecture & product decisions (the why)
-
-- **One Worker, hand-rolled router, zero framework** — small bundle, fast cold starts, full control
-  over headers/CORS/cache; no dependency risk for a content API.
-- **D1** (SQLite) as the source of truth — relational fits posts/users/follows; free tier covers
-  this scale; migrations are additive (`0001_init.sql` creates everything incl. FTS5 virtual table
-  + triggers, seeds the five channels). No destructive migrations exist today; future ones must be
-  expand→backfill→contract with a release in between.
-- **KV `RATE_LIMITS`** for fixed-window rate limits (login 10/15min per IP+email, register 5/h,
-  subscribe 10/h, public reads 300/min for anon, admin syncs 6/10min) — cheap, edge-local,
-  degrade-open.
-- **R2 `MEDIA`** mirrors Telegram photos on ingest (t.me CDN URLs expire fast) and serves them
-  through `/media/*` with immutable caching; uploads are size-guarded (`MAX_UPLOAD_BYTES`) and
-  content-typed by sniffing magic bytes, never trusting extensions.
-- **Cron `*/15 * * * *`** runs the sync; it uses a high-water-mark (`last_message_id`) so each run
-  is O(new messages), plus Cloudflare Cache (`cf-cacheTtl: 60`) when fetching `t.me/s/*`.
-- **No Queues / no Durable Objects** — deliberately: sync volume (5 channels, ~dozens of msgs/hour)
-  doesn't justify them. The only stateful need (per-isolate bootstrap) is handled with
-  `waitUntil`-guarded idempotent upserts. Revisit Queues if per-channel scraping needs fan-out or
-  retry backoff at 10+ channels.
-- **Auth** — HS256 JWT (`jose`, 7-day expiry) carrying `ver` (per-user token version in D1):
-  password change / logout-all / admin deactivation bump `ver` → all older tokens die immediately.
-  PBKDF2-SHA256 250k iterations password hashes (constant-time compare; unknown-email dummy-KDF
-  keeps timing uniform). Registration = 201, wrong credentials = 401 generic — no enumeration.
-- **Token storage: localStorage, not cookies** — frontend (Vercel) and API (Cloudflare) are
-  cross-site; third-party cookies are blocked by Safari and shrinking everywhere. Risk = XSS token
-  theft → mitigated by CSP `script-src 'self'` (no inline, no eval), React auto-escaping, and a
-  safe-by-construction markdown renderer. Refresh-token-over-cookies was considered and rejected as
-  unnecessary complexity for a 7-day bearer session in this product.
-- **Caching** — public `GET /api/posts*`/`/api/channels*` use `caches.default` (edge, `s-maxage`
-  60s/120s, `Vary: Origin` handled separately; cache bypassed when Authorization present).
-  Invalidation is TTL-based by design — no purge API needed at this write frequency; every response
-  carries `x-cache` + `x-request-id` for debugging.
-- **Search** — SQLite FTS5 external-content index with insert/update/delete triggers; query
-  builder strips FTS operator syntax and builds `"tok"* AND …` prefixes (≤8 tokens); LIKE fallback
-  for zero results.
-- **Resilience** — Telegram fetch timeout 15s, one failing channel never aborts a bulk sync
-  (per-channel result rows incl. `error`), sync is idempotent (`INSERT OR IGNORE` on
-  `(channel_slug, telegram_message_id)`), and admin-hidden posts are **never resurrected** by
-  re-sync.
-
-## Security notes
-
-- Server-side enforcement everywhere: JWT + `is_active` + role checks on all admin/`/me` routes;
-  the frontend guard is UX only. Validation on every input (zod, unknown fields stripped;
-  `tags`/`channels` normalized; emails trimmed+lowercased; ≤2000 char URL limits).
-- Errors are structured (`{error:{code,message,details}}` + `x-request-id`), 5xx details never
-  leak (generic message in prod, error names only surfaced in wrangler tail logs).
-- Security headers on every API response: `nosniff`, `DENY`, CSP (`default-src 'none'` for the
-  JSON API), `Referrer-Policy: no-referrer`, restrictive `Permissions-Policy`, `no-store` default
-  with explicit allowlisting for cached public GETs.
-- Open-redirect guard on `?next=` (same-origin only), `rel="noopener noreferrer nofollow"` on all
-  outbound links, nofollow + robots policy keep scraping honest.
-- CSV export sets `Content-Disposition: attachment`; unsubscribe links are HMAC-signed
-  (`JWT_SECRET`), expire in 30 days, and are idempotent.
-- Last-admin guard: an admin cannot demote or deactivate themselves (or the only remaining admin).
-
-## Known limitations (deliberate, documented)
-
-1. **No self-service password reset** — email sending isn't in scope; admins reset via D1 (or users
-   register anew). UI says so explicitly.
-2. **Telegram-only source** — the scraper depends on `t.me/s/<username>` markup; heavy Telegram
-   throttling would delay syncs (the 60s fetch cache + retry-on-next-cron design degrades gracefully).
-3. **Drafts are editorial-only** — synced posts arrive published by design (the product mirrors a
-   broadcast channel); admins can hide/delete, edit metadata, but not create original posts via API.
-4. **Rate limits are Worker-side best-effort**; put the Cloudflare WAF rate rule in front for real
-   volumetric protection.
-5. **`t.me` previews** may lag up to one cron cycle (15 min) — intentional, to bound scraping.
-
-## Testing
-
-- `worker/test/` — 8 files, **74 tests**: migrations, posts/search/pagination, auth lifecycle
-  (register/login/me/logout-all/password-change/session-kill), full role matrix on admin endpoints,
-  Telegram sync against captured HTML fixtures (incl. R2 cover mirroring via mocked fetch), CORS /
-  headers / sitemap / traversal, bookmarks/follows/subscribers ownership, rate-limit 429s.
-- `src/**/*.test.tsx?` — **32 tests**: markdown parser safety (no HTML/JS injection), API client
-  error mapping (envelope → typed `ApiError`, 401 → session clear), PostCard link/bookmark semantics,
-  Login form flows (success, invalid, network error), date/count formatting.
-- CI (`.github/workflows/ci.yml`) runs both suites on every PR/push; `wrangler deploy --dry-run`
-  guards the Worker build.
-
-## License
-
-Content belongs to the original channel authors; this project mirrors and attributes. Code MIT.
+Code in this repository is provided as-is for the purpose of publishing the devotionals with
+attribution. **The articles themselves remain the property of LoveWorld Publishing** — see the
+attribution note at the top. If you are the publisher and would like any part of this removed or
+changed, that request should be honoured immediately.

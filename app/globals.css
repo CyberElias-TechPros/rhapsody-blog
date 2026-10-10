@@ -1,0 +1,188 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Design tokens carried over from the archived Vite app (legacy/src/index.css) so the blog
+ * keeps its warm paper-and-ember identity, plus the devotional-specific typography below.
+ */
+@layer base {
+  :root {
+    --background: 38 40% 97%;
+    --foreground: 25 30% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 25 30% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 25 30% 12%;
+
+    --primary: 18 75% 42%;
+    --primary-foreground: 38 40% 97%;
+    --primary-glow: 28 90% 60%;
+
+    --secondary: 35 30% 92%;
+    --secondary-foreground: 25 30% 18%;
+
+    --muted: 35 25% 94%;
+    --muted-foreground: 25 12% 42%;
+
+    --accent: 42 85% 55%;
+    --accent-foreground: 25 30% 12%;
+
+    --destructive: 0 75% 50%;
+    --destructive-foreground: 38 40% 97%;
+
+    --border: 30 20% 88%;
+    --input: 30 20% 88%;
+    --ring: 18 75% 42%;
+
+    --radius: 0.75rem;
+
+    --gradient-hero: linear-gradient(135deg, hsl(18 75% 42%) 0%, hsl(28 90% 55%) 50%, hsl(42 85% 60%) 100%);
+    --gradient-warm: linear-gradient(180deg, hsl(38 40% 97%) 0%, hsl(35 35% 93%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%) 0%, hsl(35 30% 97%) 100%);
+    --shadow-elegant: 0 20px 60px -20px hsl(18 75% 42% / 0.25);
+    --shadow-soft: 0 4px 20px -4px hsl(25 30% 12% / 0.08);
+    --shadow-glow: 0 0 40px hsl(28 90% 60% / 0.35);
+
+    --transition-smooth: cubic-bezier(0.22, 1, 0.36, 1);
+
+    --sidebar-background: 35 30% 96%;
+    --sidebar-foreground: 25 30% 18%;
+    --sidebar-primary: 18 75% 42%;
+    --sidebar-primary-foreground: 38 40% 97%;
+    --sidebar-accent: 35 25% 92%;
+    --sidebar-accent-foreground: 25 30% 18%;
+    --sidebar-border: 30 20% 88%;
+    --sidebar-ring: 18 75% 42%;
+  }
+
+  .dark {
+    --background: 25 25% 8%;
+    --foreground: 38 30% 94%;
+    --card: 25 25% 11%;
+    --card-foreground: 38 30% 94%;
+    --popover: 25 25% 11%;
+    --popover-foreground: 38 30% 94%;
+    --primary: 28 90% 60%;
+    --primary-foreground: 25 25% 10%;
+    --primary-glow: 42 85% 65%;
+    --secondary: 25 20% 16%;
+    --secondary-foreground: 38 30% 94%;
+    --muted: 25 20% 14%;
+    --muted-foreground: 35 15% 65%;
+    --accent: 42 85% 55%;
+    --accent-foreground: 25 25% 10%;
+    --destructive: 0 70% 55%;
+    --destructive-foreground: 38 30% 94%;
+    --border: 25 20% 18%;
+    --input: 25 20% 18%;
+    --ring: 28 90% 60%;
+    --gradient-hero: linear-gradient(135deg, hsl(18 75% 35%) 0%, hsl(28 80% 50%) 50%, hsl(42 75% 55%) 100%);
+    --gradient-warm: linear-gradient(180deg, hsl(25 25% 8%) 0%, hsl(25 25% 11%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(25 25% 11%) 0%, hsl(25 22% 14%) 100%);
+    --sidebar-background: 25 25% 10%;
+    --sidebar-foreground: 38 30% 94%;
+    --sidebar-primary: 28 90% 60%;
+    --sidebar-primary-foreground: 25 25% 10%;
+    --sidebar-accent: 25 20% 16%;
+    --sidebar-accent-foreground: 38 30% 94%;
+    --sidebar-border: 25 20% 18%;
+    --sidebar-ring: 28 90% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: 'ss01', 'cv11';
+  }
+  h1,
+  h2,
+  h3,
+  h4,
+  h5 {
+    @apply font-serif tracking-tight;
+  }
+  ::selection {
+    @apply bg-primary/20;
+  }
+}
+
+@layer utilities {
+  .gradient-hero {
+    background: var(--gradient-hero);
+  }
+  .gradient-warm {
+    background: var(--gradient-warm);
+  }
+  .gradient-card {
+    background: var(--gradient-card);
+  }
+  .shadow-elegant {
+    box-shadow: var(--shadow-elegant);
+  }
+  .shadow-soft {
+    box-shadow: var(--shadow-soft);
+  }
+  .shadow-glow {
+    box-shadow: var(--shadow-glow);
+  }
+  .text-balance {
+    text-wrap: balance;
+  }
+  .text-pretty {
+    text-wrap: pretty;
+  }
+}
+
+/* ── Devotional typography ───────────────────────────────────────────────────────
+   The article body mirrors the printed page: a drop cap on the opening paragraph,
+   generous leading, and no hyphenation surprises. */
+@layer components {
+  .prose-blog {
+    @apply text-foreground/90 leading-relaxed;
+  }
+  .prose-blog p {
+    @apply mb-5 text-lg text-pretty;
+  }
+  .prose-blog h2 {
+    @apply text-3xl font-serif font-semibold mt-10 mb-4;
+  }
+  .prose-blog h3 {
+    @apply text-2xl font-serif font-semibold mt-8 mb-3;
+  }
+  .prose-blog blockquote {
+    @apply border-l-4 border-primary pl-5 italic my-6 text-foreground/80;
+  }
+  .prose-blog a {
+    @apply text-primary underline underline-offset-4 hover:text-primary-glow;
+  }
+  .prose-blog ul {
+    @apply list-disc pl-6 mb-5 space-y-1.5 text-lg;
+  }
+  .prose-blog strong {
+    @apply font-semibold text-foreground;
+  }
+
+  /* Drop cap — the printed editions open every article with one. */
+  .prose-dropcap > p:first-of-type::first-letter {
+    @apply font-serif float-left mr-2 mt-1 text-[3.4rem] leading-[0.85] font-semibold text-primary;
+  }
+
+  /* The opening scripture is set apart, as it is on the page. */
+  .scripture-card {
+    @apply relative rounded-2xl border border-primary/25 bg-secondary/50 px-6 py-5 font-serif text-lg italic leading-relaxed text-foreground/90;
+  }
+  .scripture-card::before {
+    content: '“';
+    @apply absolute -top-6 left-3 font-serif text-6xl text-primary/25 leading-none;
+  }
+}

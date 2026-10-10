@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Next.js (the frontend now lives at the repo root)
+.next/
+next-env.d.ts
+*.tsbuildinfo
+.vercel
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
