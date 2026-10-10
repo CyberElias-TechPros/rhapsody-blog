@@ -3,9 +3,9 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, ArrowRight, BookOpen, FileText } from 'lucide-react';
 import { KidsOcrNote, KidsPageSpread, KidsPageStrip } from '@/components/kids/Sections';
-import { getAllIssues, getAllSlugs, getIssue, getKidsStats, KIND_LABELS } from '@/lib/kids';
+import { getAllIssues, getAllSlugs, getIssue, getKidsStats, KIND_LABELS, type KidsIssue } from '@/lib/kids';
 import { formatDate } from '@/lib/format';
-import { SITE } from '@/lib/site';
+import { SITE, absoluteUrl } from '@/lib/site';
 
 export const dynamicParams = false;
 
@@ -21,18 +21,60 @@ interface Props {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { issue: slug } = await params;
   const issue = getIssue(slug);
-  if (!issue) return { title: 'Issue not found' };
-  const cover = issue.pages[0]?.image;
+  if (!issue) return { title: 'Issue not found', robots: { index: false } };
+  const url = absoluteUrl(`/kids/${issue.slug}`);
+  // The cover is a real page of the magazine, so it is the share image — no generated card needed.
+  const cover = issue.pages[0]?.image ? absoluteUrl(issue.pages[0].image) : undefined;
   return {
     title: issue.title,
     description: issue.excerpt,
-    alternates: { canonical: `/kids/${issue.slug}` },
+    keywords: [issue.series, issue.title, issue.monthName, String(issue.year), 'For Kids', 'RORK'],
+    authors: [{ name: issue.author }],
+    alternates: { canonical: url },
     openGraph: {
+      type: 'article',
       title: issue.title,
       description: issue.excerpt,
-      type: 'article',
-      ...(cover ? { images: [{ url: cover }] } : {}),
+      url,
+      siteName: SITE.name,
+      publishedTime: `${issue.date}T05:00:00.000Z`,
+      authors: [issue.author],
+      ...(cover ? { images: [{ url: cover, alt: `The cover of ${issue.title}` }] } : {}),
     },
+    twitter: {
+      card: cover ? 'summary_large_image' : 'summary',
+      title: issue.title,
+      description: issue.excerpt,
+      ...(cover ? { images: [cover] } : {}),
+    },
+  };
+}
+
+/**
+ * An issue is a number of a periodical, not an article, and it is described as one — including the
+ * ISSN the magazine printed on its own colophon, which is the reason this section can be cited.
+ */
+function jsonLd(issue: KidsIssue) {
+  const cover = issue.pages[0]?.image;
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'PublicationIssue',
+    name: issue.title,
+    description: issue.excerpt,
+    inLanguage: SITE.locale.replace('_', '-'),
+    datePublished: `${issue.date}T05:00:00.000Z`,
+    numberOfPages: issue.pageCount,
+    author: { '@type': 'Person', name: issue.author },
+    publisher: { '@type': 'Organization', name: SITE.publisher },
+    isPartOf: {
+      '@type': 'Periodical',
+      name: issue.series,
+      ...(issue.issn ? { issn: issue.issn } : {}),
+    },
+    isAccessibleForFree: true,
+    copyrightNotice: SITE.attribution,
+    mainEntityOfPage: { '@type': 'WebPage', '@id': absoluteUrl(`/kids/${issue.slug}`) },
+    ...(cover ? { image: absoluteUrl(cover) } : {}),
   };
 }
 
@@ -60,6 +102,11 @@ export default async function KidsIssuePage({ params }: Props) {
 
   return (
     <div className="container py-12 md:py-16">
+      <script
+        type="application/ld+json"
+        suppressHydrationWarning
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd(issue)) }}
+      />
       <header className="max-w-3xl">
         <p className="text-xs font-semibold uppercase tracking-wider text-primary">
           <Link href="/kids" className="inline-flex items-center gap-1.5 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50">

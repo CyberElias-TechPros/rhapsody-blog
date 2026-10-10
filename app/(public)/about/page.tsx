@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { BookOpen, BookmarkPlus, Globe, Rss, Search, Share2, ShieldCheck, Sunrise } from 'lucide-react';
+import { BookOpen, BookmarkPlus, Globe, Puzzle, Rss, Search, Share2, ShieldCheck, Sunrise } from 'lucide-react';
 import { NewsletterForm } from '@/components/common/NewsletterForm';
 import { AdSlot } from '@/components/common/AdSlot';
 import { PageHeader } from '@/components/common/StateBlocks';
@@ -43,6 +43,11 @@ const PROMISES = [
     icon: BookmarkPlus,
     title: 'Keep your own library',
     body: 'Save the days that spoke to you. They stay on your device, with no account to create and nothing uploaded anywhere.',
+  },
+  {
+    icon: Puzzle,
+    title: 'Drawn for the ones who are just starting',
+    body: 'The kids\' edition is a magazine of comics, activities and a verse to say — so it is published the way it is printed: page by page, the printed page above the words recovered from it.',
   },
 ] as const;
 
@@ -136,6 +141,14 @@ export default function AboutPage() {
         <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
           Scripture quotations are from the King James Version unless the article itself names another
           version (NKJV, AMP, AMPC, NIV, MSG, TPT and others appear in each edition).
+        </p>
+        <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
+          The kids&rsquo; magazine is the one place where that promise has a limit, and it is stated on
+          every page of it. RORK is drawn rather than typeset, so words that sit inside the artwork are
+          read by a recogniser, not copied; each page says whether its text came off the print or out of
+          the picture, with the confidence of the read, and the printed page is always one click away for
+          anyone checking a wording. Nothing is rewritten either way — but recognised lines have not
+          been read back by a human, and where one looks odd, the page image is the text.
         </p>
       </section>
 

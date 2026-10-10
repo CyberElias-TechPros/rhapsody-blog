@@ -149,6 +149,9 @@ Four rules keep it honest:
   its confidence. Below `MIN_OCR_CONFIDENCE` (55) the guess is thrown away and the page is published as
   artwork — texture is not text. The reader sees a badge per page and a note per issue, because
   recognised wording has not been checked by hand.
+  The same line is drawn under the issue itself: a card's summary and the verse it quotes are taken only
+  from printed text, so where the verse had to be read off the artwork the issue introduces itself with
+  a plain sentence instead — and the recognised line still appears on its own page, next to its badge.
 - **The magazine's two quirks are handled where they come from.** Its typeface prints most lines twice
   (a fill and an outline) at the same position — dropped by `linesFromContent` — and its frames clip
   words mid-word (`TO RULE THE WORL`), which `looksTruncated` flags rather than repairs. A short

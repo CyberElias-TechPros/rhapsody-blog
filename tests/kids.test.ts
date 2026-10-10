@@ -7,7 +7,6 @@ import {
   getIssue,
   getIssuesByYear,
   getKidsStats,
-  getPage,
   getSummary,
   KIND_LABELS,
   SOURCE_NOTES,
@@ -239,6 +238,22 @@ describe('the published issues', () => {
     }
   });
 
+  it('never lets a recogniser speak for the issue', () => {
+    // The card's one line and the quoted key verse are the site's own words about an issue, so they
+    // may only come from the printed page — a garbled read belongs on the page it came from, where
+    // its provenance is on show, and not in the summary above it.
+    for (const issue of issues) {
+      const verse = issue.pages.find((page) => page.kind === 'verse');
+      if (issue.keyVerse) {
+        expect(verse?.recovered, `${issue.slug} quotes a verse that was not printed`).toBe('text-layer');
+      }
+      if (!/^All \d+ pages of the kids/.test(issue.excerpt)) {
+        expect(verse?.recovered, `${issue.slug} describes itself with recognised wording`).toBe('text-layer');
+      }
+    }
+    expect(issues.some((issue) => issue.keyVerse), 'issues that can quote a printed verse').toBe(true);
+  });
+
   it('says out loud when an issue lost its artwork to the renderer', () => {
     for (const issue of issues) {
       expect(typeof issue.artworkDecoded, issue.slug).toBe('boolean');
@@ -272,10 +287,8 @@ describe('the published issues', () => {
     const issue = issues[0];
     expect(getIssue(issue.slug)).toBe(issue);
     expect(getIssue('2099-01-kids')).toBeUndefined();
-    expect(getPage(issue, 1)!.number).toBe(1);
-    // An out-of-range page anchor shows the cover rather than a 500.
-    expect(getPage(issue, 4000)!.number).toBe(1);
-    expect(getPage({ ...issue, pages: [] }, 1)).toBeUndefined();
+    // Pages are `#page-N` anchors inside one issue page, so there is no page lookup to keep — and
+    // `missingImages` above is what guarantees those anchors point at files that exist.
     expect(getSummary(issue).slug).toBe(issue.slug);
     expect(getSummary(issue).cover).toBe(issue.pages[0].image);
     const years = getIssuesByYear();

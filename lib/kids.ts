@@ -221,11 +221,6 @@ export function getAllSummaries(): KidsIssueSummary[] {
   return getAllIssues().map(getSummary);
 }
 
-/** Newest issue, which is what the home page and the index lead with. */
-export function getLatestIssue(): KidsIssue | undefined {
-  return getAllIssues()[0];
-}
-
 /** Issues grouped by year, newest year first, for the index. */
 export function getIssuesByYear(): { year: number; issues: KidsIssue[] }[] {
   const byYear = new Map<number, KidsIssue[]>();
@@ -240,15 +235,7 @@ export function getIssuesByYear(): { year: number; issues: KidsIssue[] }[] {
     .map(([year, issues]) => ({ year, issues: issues.sort((a, b) => b.date.localeCompare(a.date)) }));
 }
 
-export function getIssueForDate(date: string): KidsIssue | undefined {
-  return getAllIssues().find((issue) => issue.date === date || issue.slug === date.slice(0, 7));
-}
 
-/** The page a reader is looking at, by number; out of range is the cover, not a crash. */
-export function getPage(issue: KidsIssue, number: number): KidsPage | undefined {
-  if (!issue.pages.length) return undefined;
-  return issue.pages.find((entry) => entry.number === number) ?? issue.pages[0];
-}
 
 /**
  * Everything the index and the home page count. `recognised` and `textless` are the honest share of

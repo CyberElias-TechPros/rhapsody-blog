@@ -550,9 +550,13 @@ export function buildIssue({ source, slug, pages, imageBytes = 0, inks = null })
     source: `Rhapsody of Realities for Kids, ${monthName} ${source.year} Edition`,
     volume: /Vol\.?\s*([\w.,\s-]{1,24}?)(?:,|\s+${monthName}|\s*$)/i.exec(imprintText)?.[1]?.trim() || null,
     issn: /ISSN[: ]+([0-9X-]{7,9})/i.exec(imprintText)?.[1] || null,
-    keyVerse: verse ? pageExcerpt(verse.text, 200) : null,
+    // Same rule as the excerpt, and it matters more here: the key verse is quoted as a verse.
+    keyVerse: verse && verse.recovered === 'text-layer' ? pageExcerpt(verse.text, 200) : null,
+    // The verse a card quotes has to be wording the site is happy to speak in its own name. A line
+    // read off artwork by OCR can be `therefore, T have eternal life` — true of the page, not fit to
+    // be the summary of it — so the recogniser's line is used only when the print itself had it.
     excerpt:
-      verse?.excerpt ??
+      (verse?.recovered === 'text-layer' ? verse.excerpt : undefined) ??
       `All ${pages.length} pages of the kids' monthly for ${monthName} ${source.year} — the cover, the story, the verse to say and the activities — as one issue, with the words of each page recovered from the print or the artwork.`,
     intro: `An issue of _Rhapsody of Realities for Kids_ (${monthName} ${source.year}), published page by page so it can be read in a browser. The magazine is drawn, not typeset, so each page below is the printed page itself, with its words taken from the PDF's own text layer where one existed and read off the artwork where it did not.\n\nOf ${pages.length} pages, ${recovered} had their words recognised by OCR and ${empty} had no words to recover at all. Recognised text has not been checked by hand — where it looks wrong, the page image above is the source of truth.`,
     pages,
