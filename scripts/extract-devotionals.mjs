@@ -643,7 +643,7 @@ export const AUDIENCES = {
     tag: 'rhapsody-of-realities-for-kids',
     editionSuffix: '-kids',
     slugToken: 'kids',
-    blurb: 'RORK is a comic-and-activity magazine; the note in README.md explains why it is not published here.',
+    blurb: 'RORK is a comic-and-activity magazine — it is published page by page by scripts/extract-kids.mjs, not as daily posts.',
   },
 };
 
@@ -683,7 +683,7 @@ const UNSUPPORTED = [
   {
     re: /rork|for[-_ ]kids/,
     reason:
-      'the kids edition (RORK) is a comic-and-activity magazine — its story pages are pictures, with about 150 characters of text per page — so there is no article text to extract',
+      'the kids edition (RORK) is a comic-and-activity magazine, not a daily devotional — its pages are published by scripts/extract-kids.mjs instead',
   },
 ];
 

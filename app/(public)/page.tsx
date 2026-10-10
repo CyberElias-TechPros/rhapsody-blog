@@ -14,6 +14,7 @@ import {
   getEditions,
   todayIso,
 } from '@/lib/content';
+import { getKidsStats } from '@/lib/kids';
 import { AUDIENCE_ORDER, AUDIENCES } from '@/lib/audiences';
 import { AudienceBadge } from '@/components/common/AudienceBadge';
 import { formatDate, formatDayHeading } from '@/lib/format';
@@ -26,6 +27,7 @@ export const metadata: Metadata = {
 };
 
 export default function HomePage() {
+  const kids = getKidsStats();
   const today = todayIso();
   const todays = getDevotionalForDate(today);
   const all = getAllDevotionals();
@@ -179,6 +181,15 @@ export default function HomePage() {
                 </li>
               ))}
             </ul>
+            {kids.pages > 0 ? (
+              <Link
+                href="/kids"
+                className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+              >
+                <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
+                For Kids: {kids.issues} magazine {kids.issues === 1 ? 'issue' : 'issues'} · {kids.pages} pages
+              </Link>
+            ) : null}
           </div>
         </div>
       </section>

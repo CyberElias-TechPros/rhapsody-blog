@@ -28,9 +28,9 @@ import {
 
 /**
  * Corpus as it stands: eight adult editions (the 61 published Sep/Oct days plus the Mar–Aug
- * re-extraction), ten teens months and ten early-readers months. Kids editions are deliberately
- * not extracted — the RORK PDFs are a comic-and-activity magazine whose story pages are pictures, so
- * there is no article text to recover (the reason is recorded in scripts/extract-devotionals.mjs).
+ * re-extraction), ten teens months and ten early-readers months. The kids' PDFs are not in this
+ * count: RORK is a magazine of pictures, so it is published page by page by
+ * scripts/extract-kids.mjs and tested in tests/kids.test.ts instead of as daily posts.
  */
 const FIRST = '2026-01-01'; // earliest day across every audience
 const LAST = '2026-10-31';

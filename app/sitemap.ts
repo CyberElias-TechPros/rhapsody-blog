@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { getAllDevotionals, getEditions } from '@/lib/content';
+import { getAllIssues } from '@/lib/kids';
 import { absoluteUrl } from '@/lib/site';
 
 /**
@@ -15,8 +16,17 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: absoluteUrl('/devotionals'), lastModified: now, changeFrequency: 'daily', priority: 0.9 },
     { url: absoluteUrl('/editions'), lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
     { url: absoluteUrl('/search'), lastModified: now, changeFrequency: 'monthly', priority: 0.4 },
+    { url: absoluteUrl('/kids'), lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
     { url: absoluteUrl('/about'), lastModified: now, changeFrequency: 'monthly', priority: 0.4 },
   ];
+
+  // The kids' edition is an issue per page, not an article per day (see lib/kids.ts).
+  const kidsRoutes: MetadataRoute.Sitemap = getAllIssues().map((issue) => ({
+    url: absoluteUrl(`/kids/${issue.slug}`),
+    lastModified: new Date(`${issue.date}T05:00:00.000Z`),
+    changeFrequency: 'monthly',
+    priority: 0.6,
+  }));
 
   const editionRoutes: MetadataRoute.Sitemap = getEditions().map((edition) => ({
     url: absoluteUrl(`/editions/${edition.slug}`),
@@ -34,7 +44,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.8,
   }));
 
-  return [...staticRoutes, ...editionRoutes, ...postRoutes];
+  return [...staticRoutes, ...editionRoutes, ...kidsRoutes, ...postRoutes];
 }
 
 export const dynamic = 'force-static';

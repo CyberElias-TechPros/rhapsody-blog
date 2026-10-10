@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Rhapsody of Realities — every daily devotional, published as a static Next.js blog. Cloudflare Worker API in /worker.",
+  "description": "Rhapsody of Realities \u2014 every daily devotional, published as a static Next.js blog. Cloudflare Worker API in /worker.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -15,7 +15,9 @@
     "content:extract": "node scripts/extract-devotionals.mjs",
     "content:verify": "node scripts/extract-devotionals.mjs --verify",
     "worker:dev": "npm --prefix worker run dev",
-    "worker:deploy": "npm --prefix worker run deploy"
+    "worker:deploy": "npm --prefix worker run deploy",
+    "content:kids": "node scripts/extract-kids.mjs",
+    "content:kids:verify": "node scripts/extract-kids.mjs --verify"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.14",
@@ -42,7 +44,9 @@
     "tailwind-merge": "^3.7.0"
   },
   "devDependencies": {
+    "@napi-rs/canvas": "^1.0.11",
     "@tailwindcss/typography": "^0.5.20",
+    "@tesseract.js-data/eng": "^1.0.0",
     "@testing-library/react": "^16.3.3",
     "@types/node": "^22.16.5",
     "@types/react": "^19.3.0",
@@ -52,9 +56,11 @@
     "eslint": "^9.32.0",
     "eslint-config-next": "^16.4.0",
     "jsdom": "^20.0.3",
+    "pdf-to-img": "^7.0.1",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
     "tailwindcss-animate": "^1.0.7",
+    "tesseract.js": "^7.0.0",
     "typescript": "^5.8.3",
     "vitest": "^3.2.7"
   },
