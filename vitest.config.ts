@@ -1,20 +1,20 @@
+import path from 'node:path';
 import { defineConfig } from 'vitest/config';
-import react from '@vitejs/plugin-react';
-import path from 'path';
 
-// Frontend unit tests run in jsdom; Worker integration tests live in worker/ (separate vitest).
 export default defineConfig({
-  plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      '@': path.resolve(import.meta.dirname, '.'),
     },
   },
+  esbuild: {
+    jsx: 'automatic',
+  },
   test: {
-    environment: 'jsdom',
-    setupFiles: ['./src/test/setup.ts'],
-    include: ['src/**/*.test.{ts,tsx}'],
-    clearMocks: true,
-    restoreMocks: true,
+    environment: 'node',
+    include: ['tests/**/*.test.{ts,tsx}'],
+    // The content suite parses two monthly PDFs (≈144 pages) before asserting on the text.
+    testTimeout: 120_000,
+    hookTimeout: 120_000,
   },
 });
