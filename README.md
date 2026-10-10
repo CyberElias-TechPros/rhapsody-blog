@@ -168,7 +168,8 @@ Four rules keep it honest:
 
 ```bash
 npm run content:kids          # render + recover every RORK PDF → content/kids + public/kids
-npm run content:kids:verify   # parse and report, write nothing
+npm run content:kids:verify   # read every page's printed layer and report: writes nothing,
+                              # runs no OCR, and is still slow — it opens all 448 pages
 npm run content:kids -- --only april --density 150 --store-width 420   # one issue, or new limits
 ```
 

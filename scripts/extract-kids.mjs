@@ -618,7 +618,8 @@ async function main() {
     process.stderr.write(`${source.name} → ${slugForIssue(source)}\n`);
     try {
       const issue = await extractIssue(source, options);
-      if (issue.pageCount < 12) problems.push(`${source.name}: only ${issue.pageCount} pages read`);
+      // `--pages` is a slice, so a short read is the operator's request, not a broken source.
+      if (issue.pageCount < 12 && !options.pages) problems.push(`${source.name}: only ${issue.pageCount} pages read`);
       if (issue.pages.every((page) => !page.text)) problems.push(`${source.name}: no page carried any text`);
       if (!options.verify && issue.pages.some((page) => !page.image)) problems.push(`${source.name}: a page was written without an image`);
       issues.push(issue);
@@ -634,7 +635,7 @@ async function main() {
   if (workerPromiseRef.current) await workerPromiseRef.current.then((worker) => worker.terminate());
   if (options.verify) {
     for (const issue of issues) {
-      console.log(`${issue.slug}: ${issue.pageCount} pages, ${issue.recoveredPages} OCR, ${issue.textlessPages} textless, kinds ${[...new Set(issue.pages.map((p) => p.kind))].sort().join(',')}`);
+      console.log(`${issue.slug}: ${issue.pageCount} pages, ${issue.recoveredPages} OCR (no OCR pass in --verify), ${issue.textlessPages} textless, kinds ${[...new Set(issue.pages.map((p) => p.kind))].sort().join(',')}`);
     }
   } else if (issues.length) {
     const pages = issues.reduce((sum, issue) => sum + issue.pageCount, 0);
