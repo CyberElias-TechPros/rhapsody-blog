@@ -10,7 +10,7 @@ editionTitle: "October 2026"
 author: "Pastor Chris Oyakhilome"
 series: "Rhapsody of Realities"
 kind: "daily-devotional"
-excerpt: "Many have read Paul's words in Romans chapter three and concluded that no one can be righteous th before God."
+excerpt: "Many have read Paul's words in Romans chapter three and concluded that no one can be righteous before God."
 scripture: "But now the righteousness of God without the law is manifested, being witnessed by the law and the prophets (Romans 3:21)."
 scriptureReference: "Romans 3:21"
 prayerLabel: "Prayer"
@@ -26,9 +26,7 @@ source: "Rhapsody of Realities, October 2026 Edition"
 status: "published"
 ---
 
-Many have read Paul's words in Romans chapter three and concluded that no one can be righteous
-
-th before God. They quote what’s written in the 10 verse, “As it is written, There is none righteous, no, not one,” and assume that's God's present description of all men. But if you carefully follow Paul's argument, you'll discover that he wasn't addressing those in Christ. He was speaking to those who were under the Law.
+Many have read Paul's words in Romans chapter three and concluded that no one can be righteous before God. They quote what’s written in the 10th verse, “As it is written, There is none righteous, no, not one,” and assume that's God's present description of all men. But if you carefully follow Paul's argument, you'll discover that he wasn't addressing those in Christ. He was speaking to those who were under the Law.
 
 The Jews believed they had an advantage because they had the Law, while the Gentiles were regarded as outsiders, estranged from the covenants of promise. But Paul argued that having the Law didn't make anyone righteous. If righteousness came through the Law, then every requirement of the Law had to be fulfilled perfectly. Yet, the very Law they trusted testified against them. It declared, “There is none righteous, no, not one” (Psalm 14:3).
 

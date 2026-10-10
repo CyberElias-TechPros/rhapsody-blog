@@ -32,7 +32,7 @@ Consider what He did through Jesus Christ. He gave His Son for us. Jesus laid do
 
 Think about it: The One who possesses all things didn't simply bless us from His abundance; He brought us into joint ownership. This helps us understand God's dealings with us. Never view or relate with His instructions through the lens of loss or sacrifice. Rather, see them as expressions of His love and wisdom.
 
-Trust His Word and the guidance of the Holy Spirit in your life, knowing that He has your highest good at heart. He loves you more than you love yourself. He’s more passionate about your success than you could ever be. The God who gave His Son for you and made you a joint- heir with Christ will never lead you into anything that isn't ultimately in your best interest.
+Trust His Word and the guidance of the Holy Spirit in your life, knowing that He has your highest good at heart. He loves you more than you love yourself. He’s more passionate about your success than you could ever be. The God who gave His Son for you and made you a joint-heir with Christ will never lead you into anything that isn't ultimately in your best interest.
 
 ## Prayer
 

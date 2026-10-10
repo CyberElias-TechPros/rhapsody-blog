@@ -30,7 +30,7 @@ In our previous study, we reviewed what it means to give your life to Christ. It
 
 When a woman gets married, she doesn't merely surrender herself to her husband. She identifies with him. She comes into his home, takes his name, and becomes one with him. In much the same way, when you gave your life to Christ, you were brought into union with Him. You became a partaker of His life.
 
-This is why the Bible says, “But he that is joined unto the Lord is one spirit” (1 Corinthians 6:17). It’s for the same reason it tells us we’re associates of the God- kind: “Whereby are given unto us exceeding great and precious promises: that by these ye might be partakers of the divine nature...” (2 Peter 1:4).
+This is why the Bible says, “But he that is joined unto the Lord is one spirit” (1 Corinthians 6:17). It’s for the same reason it tells us we’re associates of the God-kind: “Whereby are given unto us exceeding great and precious promises: that by these ye might be partakers of the divine nature...” (2 Peter 1:4).
 
 Don’t view Christianity through the lens of religion. The Lord Jesus didn't come merely to improve your conduct or introduce you to a new religious system. He came to give us the God-life. God's own nature has been imparted to your spirit. This is the essence of the New Birth and beauty of the Gospel. The divine life has supplanted the human life.
 

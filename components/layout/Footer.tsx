@@ -46,7 +46,7 @@ export function Footer() {
                   href={`/editions/${edition.slug}`}
                   className="hover:text-primary transition-colors rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                 >
-                  {edition.title}
+                  {edition.audienceTitle}
                   <span className="ml-1 text-xs opacity-70">({edition.postCount})</span>
                 </Link>
               </li>

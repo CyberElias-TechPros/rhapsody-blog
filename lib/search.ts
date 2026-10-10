@@ -1,7 +1,7 @@
 /**
  * Client-safe search: ranks the static `SearchDoc[]` index the server hands to `/search`.
  *
- * Deliberately tiny and dependency-free — 61 documents per edition means an exhaustive scan
+ * Deliberately tiny and dependency-free — a few hundred documents means an exhaustive scan
  * is instantaneous, and keeping the scoring here (rather than in a component) makes it testable.
  */
 
@@ -38,7 +38,8 @@ export function scoreDoc(doc: SearchDoc, tokens: string[], phrase: string): { sc
   const opening = norm(doc.opening);
   const reference = norm(doc.scriptureReference);
   const tags = doc.tags.map(norm).join(' ');
-  const dateish = `${doc.date} ${doc.edition} ${doc.editionTitle} ${doc.weekday}`.toLowerCase();
+  // The audience belongs in here too: “teens” is a search, not only a filter.
+  const dateish = `${doc.date} ${doc.edition} ${doc.editionTitle} ${doc.weekday} ${doc.audience} ${doc.audienceLabel}`.toLowerCase();
 
   let score = 0;
   let matchedOn: SearchMatch['matchedOn'] = 'excerpt';

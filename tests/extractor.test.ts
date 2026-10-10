@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { capNeedsSpace, makeExcerpt, slugify, toTitleCase } from '../scripts/extract-devotionals.mjs';
+import {
+  AUDIENCES as PUBLISHER_AUDIENCES,
+  AUDIENCE_ORDER as PUBLISHER_ORDER,
+  capNeedsSpace,
+  makeExcerpt,
+  slugify,
+  toTitleCase,
+} from '../scripts/extract-devotionals.mjs';
+import { AUDIENCES, AUDIENCE_ORDER } from '@/lib/audiences';
 
 describe('toTitleCase', () => {
   it('lower-cases articles, conjunctions and short prepositions mid-title', () => {
@@ -115,5 +123,35 @@ describe('capNeedsSpace', () => {
     expect(capNeedsSpace('I', 'n our previous study')).toBe(false);
     expect(capNeedsSpace('A', 's a result')).toBe(false);
     expect(capNeedsSpace('I', 't means you are God’s handcraft')).toBe(false);
+  });
+});
+
+
+describe('the two audience tables', () => {
+  /**
+   * The extractor parses PDFs and cannot import from the app (pdf.js would ride into the bundle),
+   * so `lib/audiences.ts` restates the same table. This is the drift guard: labels, series names and
+   * the edition suffix all reach readers' URLs and front matter, and a mismatch writes posts the app
+   * cannot group.
+   */
+  it('agree on every audience the app publishes', () => {
+    // The extractor also recognises the kids edition, purely to say why it is skipped.
+    expect(PUBLISHER_ORDER).toEqual([...AUDIENCE_ORDER, 'kids']);
+
+    for (const id of AUDIENCE_ORDER) {
+      const app = AUDIENCES[id];
+      const script = PUBLISHER_AUDIENCES[id];
+      expect(script.key, id).toBe(id);
+      expect(script.label, id).toBe(app.label);
+      expect(script.shortLabel, id).toBe(app.shortLabel);
+      expect(script.series, id).toBe(app.series);
+      expect(script.editionSuffix, id).toBe(app.editionSuffix);
+      // The blurbs are allowed to differ — the app's is UI copy, the script's is a comment — but the
+      // tag that lands in every post's front matter is the series name, slugified, on both sides.
+      expect(script.tag, id).toBe(slugify(app.series, 60));
+      // The script builds slugs from a bare token, the app from the same token with its dash.
+      expect(script.slugToken ?? '', id).toBe(app.slugToken.replace(/^-/, ''));
+      expect(app.slugToken, id).toBe(app.editionSuffix);
+    }
   });
 });

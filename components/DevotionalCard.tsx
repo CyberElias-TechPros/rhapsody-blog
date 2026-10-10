@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ArrowUpRight, BookMarked, CalendarDays, Clock } from 'lucide-react';
 import { SaveButton } from '@/components/devotional/SaveButton';
+import { AudienceBadge } from '@/components/common/AudienceBadge';
 import { formatDateShort } from '@/lib/format';
 import type { DevotionalSummary } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -30,9 +31,13 @@ export function DevotionalCard({
       <div className="relative h-full gradient-card rounded-2xl border border-border/60 hover:border-primary/40 transition-all hover:shadow-elegant flex flex-col">
         <div className="p-6 flex flex-col flex-1">
           <div className="flex items-start justify-between gap-3 mb-3">
-            <span className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wider font-medium text-primary">
-              <CalendarDays className="w-3.5 h-3.5" aria-hidden="true" />
-              {post.weekday} {post.dayOfMonth}
+            <span className="inline-flex items-center gap-2 text-xs uppercase tracking-wider font-medium text-primary">
+              <span className="inline-flex items-center gap-1.5">
+                <CalendarDays className="w-3.5 h-3.5" aria-hidden="true" />
+                {post.weekday} {post.dayOfMonth}
+              </span>
+              {/* A day belongs to several editions; the card has to say which one it is holding. */}
+              <AudienceBadge audience={post.audience} />
             </span>
             <div className="flex items-center gap-1 -mt-1 -mr-2">
               <SaveButton slug={post.slug} />
@@ -57,7 +62,9 @@ export function DevotionalCard({
             </Link>
           </h3>
 
-          {!compact && <p className="text-muted-foreground line-clamp-3 mb-5 text-sm leading-relaxed">{post.excerpt}</p>}
+          {!compact && (
+            <p className="text-muted-foreground line-clamp-3 mb-5 text-sm leading-relaxed">{post.excerpt}</p>
+          )}
 
           <div className="mt-auto flex items-center justify-between gap-3 text-xs text-muted-foreground pt-2">
             <time dateTime={post.date}>{formatDateShort(post.date)}</time>

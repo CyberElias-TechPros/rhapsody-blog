@@ -26,7 +26,7 @@ source: "Rhapsody of Realities, October 2026 Edition"
 status: "published"
 ---
 
-When you read about the men and women of faith in the Old Testament, it's impossible not to be inspired by their extraordinary feats of faith and experiences with God. Take Caleb, for example. He declared at eighty- five years of age, "As yet I am as strong this day as I was in the day that Moses sent me..." (Joshua 14:11).
+When you read about the men and women of faith in the Old Testament, it's impossible not to be inspired by their extraordinary feats of faith and experiences with God. Take Caleb, for example. He declared at eighty-five years of age, "As yet I am as strong this day as I was in the day that Moses sent me..." (Joshua 14:11).
 
 Moses was one hundred and twenty years old when he departed this world, yet the Bible says, "…his eye was not dim, nor his natural force abated" (Deuteronomy 34:7). These were remarkable manifestations of God's power under the Old Covenant. But as wonderful as those accounts are, we have something better. We have the Holy Spirit living in us.
 

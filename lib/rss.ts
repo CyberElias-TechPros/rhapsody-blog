@@ -32,6 +32,9 @@ export function devotionalToHtml(post: Devotional): string {
   if (post.prayer) {
     parts.push(`<h3>${escapeXml(post.prayerLabel)}</h3><p>${escapeXml(post.prayer)}</p>`);
   }
+  for (const section of post.extras) {
+    parts.push(`<h3>${escapeXml(section.label)}</h3><p>${escapeXml(section.text)}</p>`);
+  }
   if (post.furtherStudy) {
     parts.push(`<h3>Further Study</h3><p>${escapeXml(post.furtherStudy)}</p>`);
   }
