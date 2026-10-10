@@ -17,7 +17,8 @@
     "worker:dev": "npm --prefix worker run dev",
     "worker:deploy": "npm --prefix worker run deploy",
     "content:kids": "node scripts/extract-kids.mjs",
-    "content:kids:verify": "node scripts/extract-kids.mjs --verify"
+    "content:kids:verify": "node scripts/extract-kids.mjs --verify",
+    "content:kids:report": "node scripts/extract-kids.mjs --report"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.14",

@@ -24,6 +24,8 @@ import {
   MIN_OCR_CONFIDENCE,
   MIN_PUBLISH_CHARS,
   pageExcerpt,
+  proofreadingFlags,
+  proofreadingQueue,
   artworkLooksComplete,
   inkRatio,
   MIN_PAGE_INK,
@@ -141,6 +143,38 @@ describe('page kinds', () => {
     );
     expect(pageExcerpt('')).toBeNull();
     expect(pageExcerpt('a'.repeat(400))!.length).toBeLessThanOrEqual(160);
+  });
+});
+
+describe('the proofreading worklist', () => {
+  const pages = [
+    { number: 1, recovered: 'text-layer', confidence: 40, excerpt: 'a | b' },
+    { number: 2, recovered: 'ocr', confidence: 77, excerpt: 'Jesus came near a small village.' },
+    { number: 3, recovered: 'ocr', confidence: 61, excerpt: '€ es YOXNE Gap' },
+    { number: 4, recovered: 'ocr', confidence: 90, excerpt: 'THE | FRUITS' },
+    { number: 5, recovered: 'ocr', confidence: 58, excerpt: 'a line that reads fine enough' },
+  ];
+
+  it('queues recognised pages that look wrong or read weakly, worst first', () => {
+    expect(proofreadingQueue(pages).map((entry) => entry.number)).toEqual([4, 5, 3]);
+    expect(proofreadingQueue(pages)[0].flags).toContain('stray mark');
+  });
+
+  it('never queues a page whose words came off the printed layer, however odd it looks', () => {
+    const queue = proofreadingQueue([pages[0]]);
+    expect(queue).toEqual([]);
+  });
+
+  it('names a one-letter word and a stray pipe, and leaves the article alone', () => {
+    expect(proofreadingFlags('I have a life')).toEqual([]);
+    expect(proofreadingFlags('T have a life')).toContain('single-letter word');
+    expect(proofreadingFlags('BELOW | ME')).toContain('stray mark');
+  });
+
+  it('takes a different threshold when asked', () => {
+    const one = [{ number: 7, recovered: 'ocr', confidence: 70, excerpt: 'clean sentence here' }];
+    expect(proofreadingQueue(one)).toEqual([]);
+    expect(proofreadingQueue(one, { weakAt: 75 }).map((entry) => entry.number)).toEqual([7]);
   });
 });
 

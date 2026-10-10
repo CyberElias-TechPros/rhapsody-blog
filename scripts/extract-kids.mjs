@@ -582,6 +582,78 @@ function parseRange(spec) {
   return set;
 }
 
+/* ------------------------------------------------------------------ proofreading */
+
+/** A recognised page under this confidence is worth reading back, flags or no flags. */
+export const WEAK_CONFIDENCE = 65;
+
+/**
+ * Marks that say a line was read rather than printed. Both are patterns the *print* never has: a word
+ * of one letter (OCR's habit of turning `I` into `T`, or splitting `life` into `l if`), and the box
+ * drawing a magazine's activity frames leave behind. `a`, `A` and `I` are excluded because they are
+ * words.
+ */
+export const PROOFREADING_FLAGS = [
+  { name: 'single-letter word', re: /(?:^|\s)[B-DF-HJ-NP-TV-Zb-df-hj-np-tv-z](?:\s|$)/ },
+  { name: 'stray mark', re: /[|~`^_]/ },
+];
+
+/** Which suspicious marks a recognised line carries, by their label rather than their regex. */
+export function proofreadingFlags(text) {
+  return PROOFREADING_FLAGS.filter(({ re }) => re.test(String(text ?? ''))).map(({ name }) => name);
+}
+
+/**
+ * The pages worth reading back against the artwork, worst first: flagged lines before weak-but-clean
+ * ones, low confidence before high. A page whose words came off the printed layer is never queued —
+ * there is nothing to check when the PDF itself had the text.
+ */
+export function proofreadingQueue(pages, { weakAt = WEAK_CONFIDENCE } = {}) {
+  return (Array.isArray(pages) ? pages : [])
+    .filter((page) => page.recovered === 'ocr')
+    .map((page) => {
+      const quote = String(page.excerpt ?? '').replace(/\s+/g, ' ').trim();
+      return {
+        number: Number(page.number),
+        confidence: Number(page.confidence ?? 0),
+        flags: proofreadingFlags(quote),
+        quote,
+      };
+    })
+    .filter((entry) => entry.flags.length > 0 || entry.confidence < weakAt)
+    .sort((a, b) => b.flags.length - a.flags.length || a.confidence - b.confidence || a.number - b.number);
+}
+
+/**
+ * `--report`: read what is published and print the worklist an editor needs, worst page first, each
+ * entry linking straight to its anchor. Nothing is rendered, nothing is written — triage costs a
+ * second, not the seven minutes a full run does.
+ */
+export async function reportProofreading(outDir = path.join(REPO_ROOT, 'content/kids')) {
+  const { default: matter } = await import('gray-matter');
+  const files = fs.readdirSync(outDir).filter((file) => file.endsWith('.md')).sort();
+  let total = 0;
+  for (const file of files) {
+    const { data } = matter(fs.readFileSync(path.join(outDir, file), 'utf8'));
+    const slug = data.slug ?? file.replace(/\.md$/, '');
+    const queue = proofreadingQueue(data.pages);
+    if (!queue.length) {
+      console.log(`${slug}: nothing to check`);
+      continue;
+    }
+    total += queue.length;
+    console.log(`${slug}: ${queue.length} page${queue.length === 1 ? '' : 's'} worth reading back`);
+    for (const entry of queue) {
+      console.log(
+        `  p${String(entry.number).padStart(2, '0')}  ${entry.confidence}%  ${entry.flags.join(', ') || 'low confidence'}`
+      );
+      if (entry.quote) console.log(`        /kids/${slug}#page-${entry.number}  "${entry.quote.slice(0, 96)}"`);
+    }
+  }
+  console.log(`${total} page(s) to read back across ${files.length} issue(s).`);
+  return total;
+}
+
 /* ------------------------------------------------------------------ driver */
 
 async function main() {
@@ -604,6 +676,11 @@ async function main() {
       if (number % 10 === 0 || number === total) process.stderr.write(`  ${issue}: page ${number}/${total}\n`);
     },
   };
+
+  if (has('--report')) {
+    await reportProofreading(path.resolve(REPO_ROOT, valueOf('--out') ?? 'content/kids'));
+    return;
+  }
 
   let sources = discoverKidsPdf(REPO_ROOT);
   const filter = valueOf('--only');

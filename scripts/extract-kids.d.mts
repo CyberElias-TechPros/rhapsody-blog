@@ -91,6 +91,16 @@ export const MIN_PAGE_INK: number;
 /** Whether an issue's rendered pages look like printed pages rather than words on white. */
 export function artworkLooksComplete(inks: number[], floor?: number): boolean;
 
+/** Confidence under which a recognised page is queued for a human, whatever it looks like. */
+export const WEAK_CONFIDENCE: number;
+export const PROOFREADING_FLAGS: { name: string; re: RegExp }[];
+export function proofreadingFlags(text: string): string[];
+export function proofreadingQueue(
+  pages: { number: number; recovered: string; confidence?: number; excerpt?: string }[],
+  options?: { weakAt?: number }
+): { number: number; confidence: number; flags: string[]; quote: string }[];
+export function reportProofreading(outDir?: string): Promise<number>;
+
 export function encodePage(png: Buffer, options?: { maxWidth?: number; quality?: number }): Promise<Buffer>;
 export function renderPages(bytes: Uint8Array, options?: { scale?: number }): AsyncGenerator<{ number: number; png: Buffer }>;
 export function buildIssue(input: { source: KidsSource; slug: string; pages: KidsPageData[]; imageBytes?: number }): KidsIssueData;

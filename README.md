@@ -173,8 +173,15 @@ Four rules keep it honest:
 npm run content:kids          # render + recover every RORK PDF → content/kids + public/kids
 npm run content:kids:verify   # read every page's printed layer and report: writes nothing,
                               # runs no OCR, and is still slow — it opens all 448 pages
+npm run content:kids:report   # which pages a human should read back, worst first, each linking to
+                              # its own anchor — the recognised pages that are weak or look wrong
 npm run content:kids -- --only april --density 150 --store-width 420   # one issue, or new limits
 ```
+
+Nobody proofreads 448 pages. `--report` reads the published front matter and prints the 60-odd pages
+whose recognised text is either low-confidence or carries a mark the print never has — a one-letter
+word, a stray rule from a word-search box — worst first, so the checking starts where it pays. The
+line a card quotes is held to a stricter rule than a page's body: see the first rule above.
 
 Tesseract prints `Image too small to scale!!` on pages that are mostly artwork — that is Leptonica
 explaining why it found nothing on a thin strip, not a failure. The rights position is the same as the
