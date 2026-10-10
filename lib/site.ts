@@ -25,6 +25,7 @@ export const NAV_LINKS = [
   { href: '/', label: 'Home' },
   { href: '/devotionals', label: 'Devotionals' },
   { href: '/editions', label: 'Editions' },
+  { href: '/kids', label: 'For Kids' },
   { href: '/about', label: 'About' },
 ] as const;
 

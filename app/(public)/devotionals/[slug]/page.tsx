@@ -10,17 +10,21 @@ import { SaveButton } from '@/components/devotional/SaveButton';
 import { ShareRow } from '@/components/devotional/ShareRow';
 import {
   ClosingCard,
+  ExtraSectionCard,
   FurtherStudyCard,
   ReadingPlansCard,
   ScriptureCard,
 } from '@/components/devotional/Sections';
+import { AudienceBadge } from '@/components/common/AudienceBadge';
 import {
   getAllDevotionals,
   getAllSlugs,
   getAdjacentDevotionals,
+  getDaySiblings,
   getDevotionalBySlug,
   getDevotionalsByEdition,
 } from '@/lib/content';
+import { AUDIENCES } from '@/lib/audiences';
 import { formatDate, formatDayHeading } from '@/lib/format';
 import { SITE, absoluteUrl } from '@/lib/site';
 import type { Devotional } from '@/lib/types';
@@ -99,6 +103,7 @@ export default async function DevotionalPage({ params }: Props) {
   if (!post) notFound();
 
   const { previous, next } = getAdjacentDevotionals(post.slug);
+  const siblings = getDaySiblings(post.slug);
   const moreFromEdition = getDevotionalsByEdition(post.edition)
     .filter((p) => p.slug !== post.slug)
     .slice(0, 3);
@@ -128,6 +133,7 @@ export default async function DevotionalPage({ params }: Props) {
             >
               {post.editionTitle} edition
             </Link>
+            <AudienceBadge audience={post.audience} href={`/devotionals?audience=${post.audience}`} />
             <span className="text-muted-foreground" aria-hidden="true">
               ·
             </span>
@@ -140,6 +146,13 @@ export default async function DevotionalPage({ params }: Props) {
           <h1 className="font-serif text-4xl md:text-6xl font-semibold leading-[1.1] tracking-tight mt-3 text-balance">
             {post.title}
           </h1>
+
+          {/* The line the edition prints under its headline — `(Be a problem-solver)` and friends. */}
+          {post.subtitle && (
+            <p className="mt-4 font-serif text-xl md:text-2xl leading-snug text-muted-foreground italic text-balance">
+              {post.subtitle}
+            </p>
+          )}
 
           <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
             <time dateTime={post.date}>{formatDayHeading(post.date)}</time>
@@ -159,6 +172,9 @@ export default async function DevotionalPage({ params }: Props) {
         </div>
 
         <ClosingCard label={post.prayerLabel} text={post.prayer} />
+        {post.extras.map((section) => (
+          <ExtraSectionCard key={section.label} section={section} />
+        ))}
         <FurtherStudyCard references={post.furtherStudy} />
         <ReadingPlansCard oneYear={post.oneYearPlan} twoYear={post.twoYearPlan} />
 
@@ -191,6 +207,29 @@ export default async function DevotionalPage({ params }: Props) {
             <code className="text-[0.95em]">{post.sourcePdf}</code>. {SITE.attribution}
           </span>
         </p>
+
+        {siblings.length > 0 && (
+          <aside className="mt-10 rounded-2xl border border-border/70 bg-card px-6 py-5">
+            <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">The same day, for other readers</p>
+            <ul className="mt-3 flex flex-wrap gap-x-6 gap-y-2">
+              {siblings.map((sibling) => (
+                <li key={sibling.slug}>
+                  <Link
+                    href={`/devotionals/${sibling.slug}`}
+                    className="group inline-flex items-center gap-2 text-sm font-medium hover:text-primary transition-colors"
+                  >
+                    <AudienceBadge audience={sibling.audience} />
+                    <span className="font-serif text-base group-hover:text-primary transition-colors">{sibling.title}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-3 text-xs text-muted-foreground">
+              {AUDIENCES[post.audience].series} is read alongside{' '}
+              {siblings.map((sibling) => AUDIENCES[sibling.audience].series).join(' and ')}.
+            </p>
+          </aside>
+        )}
 
         {/* Below the whole devotional — message, prayer, further study and reading plans are
             never interrupted by an ad unit. */}

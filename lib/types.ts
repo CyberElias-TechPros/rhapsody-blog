@@ -13,7 +13,21 @@
 
 /* ------------------------------------------------------------------ content (this repo) */
 
+import type { AudienceId } from './audiences';
+
+export type { AudienceId } from './audiences';
+
 export type ClosingLabel = 'Prayer' | 'Confession';
+
+/**
+ * A section some audience prints that the adult edition has no field for — the teens edition's
+ * `Speak` and `Act`. They travel as label + text instead of as new keys per section, so a family
+ * that prints something else does not need a new field.
+ */
+export interface DevotionalSection {
+  label: string;
+  text: string;
+}
 
 export interface Devotional {
   /** Dated permalink slug: `2026-09-01-the-name-that-rules-heaven-and-earth`. */
@@ -28,6 +42,10 @@ export interface Devotional {
   /** `yyyy-mm` — the edition this article belongs to. */
   edition: string;
   editionTitle: string;
+  /** Which edition family this article belongs to; defaults to `adults` in the content layer. */
+  audience: AudienceId;
+  /** `For Teens` and friends — the audience name as the edition prints it. */
+  audienceLabel: string;
   author: string;
   series: string;
   kind: string;
@@ -36,9 +54,13 @@ export interface Devotional {
   scripture: string;
   /** e.g. `Matthew 28:18` — parsed out of the closing parenthesis. */
   scriptureReference: string;
+  /** The parenthetical line under the title, when the edition prints one. */
+  subtitle?: string;
   /** Most days close with a PRAYER; some close with a CONFESSION instead. */
   prayerLabel: ClosingLabel;
   prayer: string;
+  /** The audience's own closing sections (`Speak`, `Act`), in the order the page prints them. */
+  extras: DevotionalSection[];
   furtherStudy: string;
   oneYearPlan: string;
   twoYearPlan: string;
@@ -62,6 +84,10 @@ export type DevotionalSummary = Omit<Devotional, 'body' | 'message'>;
 export interface Edition {
   slug: string;
   title: string;
+  /** `October 2026 · For Teens` on an audience's edition, plain `October 2026` on the adult one. */
+  audienceTitle: string;
+  audience: AudienceId;
+  audienceLabel: string;
   year: number;
   month: number;
   monthName: string;
@@ -75,11 +101,23 @@ export type DevotionalSort = 'new' | 'old';
 
 export interface DevotionalQuery {
   edition?: string;
+  audience?: AudienceId;
   tag?: string;
   q?: string;
   sort?: DevotionalSort;
   page?: number;
   limit?: number;
+}
+
+/** An edition listing grouped under the audience it was written for. */
+export interface AudienceGroup {
+  audience: AudienceId;
+  label: string;
+  shortLabel: string;
+  series: string;
+  blurb: string;
+  postCount: number;
+  editions: Edition[];
 }
 
 export interface Paged<T> {
@@ -98,6 +136,8 @@ export interface SearchDoc {
   date: string;
   edition: string;
   editionTitle: string;
+  audience: AudienceId;
+  audienceLabel: string;
   weekday: string;
   scriptureReference: string;
   tags: string[];

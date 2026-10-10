@@ -2,12 +2,15 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useMemo, useState, type FormEvent } from 'react';
+import { Suspense, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import { CalendarDays, Search, SearchX } from 'lucide-react';
 import { AdSlot } from '@/components/common/AdSlot';
+import { AudienceBadge } from '@/components/common/AudienceBadge';
 import { Button } from '@/components/ui/button';
+import { AUDIENCES, AUDIENCE_ORDER, audienceOrNull, type AudienceId } from '@/lib/audiences';
 import { formatDateShort } from '@/lib/format';
 import { searchDocs } from '@/lib/search';
+import { cn } from '@/lib/utils';
 import type { SearchDoc } from '@/lib/types';
 
 const SUGGESTIONS = ['righteousness', 'Holy Spirit', 'Romans', 'prayer', 'born again', 'covenant'];
@@ -29,7 +32,38 @@ function SearchInner({ docs, initialQuery }: { docs: SearchDoc[]; initialQuery: 
     setValue(urlQuery);
   }
 
-  const results = useMemo(() => searchDocs(docs, value.trim()), [docs, value]);
+  // Which audience to search within, again read from the URL so a filtered search is linkable.
+  const urlAudience = audienceOrNull(searchParams.get('audience') ?? undefined);
+  const audience: AudienceId | undefined = urlAudience ?? undefined;
+  const searching = Boolean(value.trim());
+  // Rank the whole library and scope afterwards, so the chips below can report what each edition
+  // has to offer for this query instead of showing (0) for every edition you did not pick.
+  const matches = useMemo(() => searchDocs(docs, value.trim()), [docs, value]);
+  const results = useMemo(
+    () => (audience ? matches.filter((match) => match.doc.audience === audience) : matches),
+    [matches, audience]
+  );
+  const counts = useMemo(() => {
+    const tally: Partial<Record<AudienceId, number>> = {};
+    for (const doc of docs) tally[doc.audience] = (tally[doc.audience] ?? 0) + 1;
+    if (searching) {
+      const hits: Partial<Record<AudienceId, number>> = {};
+      for (const match of matches) hits[match.doc.audience] = (hits[match.doc.audience] ?? 0) + 1;
+      for (const id of Object.keys(tally) as AudienceId[]) tally[id] = hits[id] ?? 0;
+    }
+    return tally;
+  }, [docs, matches, searching]);
+  const countFor = (id: AudienceId | 'all') =>
+    id === 'all' ? (searching ? matches.length : docs.length) : counts[id] ?? 0;
+
+  const commitAudience = (next?: AudienceId) => {
+    const sp = new URLSearchParams(searchParams.toString());
+    if (next) sp.set('audience', next);
+    else sp.delete('audience');
+    if (value.trim()) sp.set('q', value.trim());
+    const qs = sp.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  };
 
   const commit = (term: string) => {
     const q = term.trim();
@@ -88,11 +122,25 @@ function SearchInner({ docs, initialQuery }: { docs: SearchDoc[]; initialQuery: 
         ))}
       </div>
 
+      <nav
+        aria-label="Search within an audience"
+        className="mt-4 flex flex-wrap items-center gap-2 text-xs"
+      >
+        <AudienceChip active={!audience} onClick={() => commitAudience(undefined)} count={countFor('all')}>
+          All readers
+        </AudienceChip>
+        {AUDIENCE_ORDER.map((id) => (
+          <AudienceChip key={id} active={audience === id} onClick={() => commitAudience(id)} count={countFor(id)} title={AUDIENCES[id].blurb}>
+            {AUDIENCES[id].label}
+          </AudienceChip>
+        ))}
+      </nav>
+
       <div className="mt-10" aria-live="polite">
         {!value.trim() ? (
           <p className="text-muted-foreground text-sm">
-            {docs.length} devotionals indexed — start typing to search titles, articles, prayers and scripture
-            references.
+            {docs.length} devotionals indexed{audience ? ` (${counts[audience] ?? 0} in ${AUDIENCES[audience].label.toLowerCase()})` : ''}{' '}
+            — start typing to search titles, articles, prayers and scripture references.
           </p>
         ) : results.length === 0 ? (
           <div className="flex flex-col items-center gap-3 py-16 text-center">
@@ -112,6 +160,7 @@ function SearchInner({ docs, initialQuery }: { docs: SearchDoc[]; initialQuery: 
           <>
             <p className="text-sm text-muted-foreground mb-6">
               {results.length} result{results.length === 1 ? '' : 's'} for “{value.trim()}”
+              {audience ? ` (${AUDIENCES[audience].label.toLowerCase()})` : ''}
             </p>
             <ol className="grid gap-3">
               {results.map(({ doc, matchedOn }) => (
@@ -127,6 +176,7 @@ function SearchInner({ docs, initialQuery }: { docs: SearchDoc[]; initialQuery: 
                       </span>
                       <span aria-hidden="true">·</span>
                       <span>{doc.editionTitle}</span>
+                      <AudienceBadge audience={doc.audience} />
                       {doc.scriptureReference && (
                         <>
                           <span aria-hidden="true">·</span>
@@ -152,6 +202,38 @@ function SearchInner({ docs, initialQuery }: { docs: SearchDoc[]; initialQuery: 
         )}
       </div>
     </div>
+  );
+}
+
+function AudienceChip({
+  active,
+  onClick,
+  count,
+  title,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  count: number;
+  title?: string;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      aria-pressed={active}
+      className={cn(
+        'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-colors',
+        active
+          ? 'border-primary/40 bg-primary/15 text-primary'
+          : 'border-border/70 text-muted-foreground hover:text-foreground'
+      )}
+    >
+      {children}
+      <span className="opacity-70 tabular-nums">({count})</span>
+    </button>
   );
 }
 

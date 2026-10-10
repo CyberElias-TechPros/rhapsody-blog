@@ -14,6 +14,9 @@ import {
   getEditions,
   todayIso,
 } from '@/lib/content';
+import { getKidsStats } from '@/lib/kids';
+import { AUDIENCE_ORDER, AUDIENCES } from '@/lib/audiences';
+import { AudienceBadge } from '@/components/common/AudienceBadge';
 import { formatDate, formatDayHeading } from '@/lib/format';
 import { SITE } from '@/lib/site';
 
@@ -24,6 +27,7 @@ export const metadata: Metadata = {
 };
 
 export default function HomePage() {
+  const kids = getKidsStats();
   const today = todayIso();
   const todays = getDevotionalForDate(today);
   const all = getAllDevotionals();
@@ -33,6 +37,11 @@ export default function HomePage() {
   const latest = all.slice(0, 6);
   // Six most recent, minus the featured one, so the grid never repeats the hero.
   const rest = latest.filter((p) => p.slug !== featured?.slug).slice(0, 6);
+  // Today's article in the other editions, so the front page points a parent at the version a
+  // child can actually read instead of leaving them to discover it in the listing.
+  const othersToday = AUDIENCE_ORDER.filter((id) => id !== 'adults')
+    .map((id) => ({ audience: id, post: getDevotionalForDate(today, id) }))
+    .filter((entry) => entry.post);
 
   return (
     <>
@@ -104,6 +113,32 @@ export default function HomePage() {
                 <Link href="/devotionals">Browse all devotionals</Link>
               </Button>
             </div>
+
+            {othersToday.length > 0 && (
+              <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3 animate-fade-in-slow">
+                <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                  Also today
+                </span>
+                {othersToday.map(({ audience, post }) => (
+                  <Link
+                    key={audience}
+                    href={`/devotionals/${post!.slug}`}
+                    className="group inline-flex items-center gap-2.5 rounded-full border border-border/70 bg-card/70 py-1.5 pl-1.5 pr-4 hover:border-primary/40 transition-colors"
+                  >
+                    <AudienceBadge audience={audience} className="bg-primary/15 text-primary" />
+                    <span className="font-serif text-sm font-medium group-hover:text-primary transition-colors">
+                      {post!.title}
+                    </span>
+                  </Link>
+                ))}
+                <span className="text-xs text-muted-foreground">
+                  {AUDIENCE_ORDER.filter((id) => id !== 'adults')
+                    .map((id) => AUDIENCES[id].label.replace(/^For /, ''))
+                    .join(' and ')}{' '}
+                  editions, same day.
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -114,7 +149,9 @@ export default function HomePage() {
           Editions
         </h2>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {editions.map((edition, i) => (
+          {/* The newest months across every audience — the strip is an invitation, not an index;
+              /editions carries the whole list grouped by audience. */}
+          {editions.slice(0, 6).map((edition, i) => (
             <Link
               key={edition.slug}
               href={`/editions/${edition.slug}`}
@@ -122,7 +159,9 @@ export default function HomePage() {
               style={{ animationDelay: `${i * 60}ms`, animationFillMode: 'backwards' }}
             >
               <CalendarDays className="w-4 h-4 opacity-80" aria-hidden="true" />
-              <span className="mt-3 block font-serif text-lg font-semibold leading-tight">{edition.title}</span>
+              <span className="mt-3 block font-serif text-lg font-semibold leading-tight">
+                {edition.audienceTitle}
+              </span>
               <span className="mt-1 block text-xs opacity-85">
                 {edition.postCount} devotionals · {formatDate(edition.firstDate)} – {formatDate(edition.lastDate)}
               </span>
@@ -134,6 +173,23 @@ export default function HomePage() {
             <p className="mt-1 text-xs text-muted-foreground">
               {stats.posts} articles · {stats.words.toLocaleString()} words · {stats.editions} editions
             </p>
+            <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+              {stats.byAudience.map((entry) => (
+                <li key={entry.audience} className="inline-flex items-center gap-1.5">
+                  <span className="w-1 h-1 rounded-full bg-primary/70" aria-hidden="true" />
+                  {entry.label.replace(/^For /, '')}: <span className="text-foreground font-medium">{entry.posts}</span>
+                </li>
+              ))}
+            </ul>
+            {kids.pages > 0 ? (
+              <Link
+                href="/kids"
+                className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+              >
+                <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
+                For Kids: {kids.issues} magazine {kids.issues === 1 ? 'issue' : 'issues'} · {kids.pages} pages
+              </Link>
+            ) : null}
           </div>
         </div>
       </section>

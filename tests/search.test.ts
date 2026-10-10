@@ -15,6 +15,8 @@ const doc = (overrides: Partial<SearchDoc> = {}): SearchDoc => ({
   date: '2026-10-15',
   edition: '2026-10',
   editionTitle: 'October 2026 Edition',
+  audience: 'adults',
+  audienceLabel: 'For Adults',
   weekday: 'Thursday',
   scriptureReference: 'Romans 3:22',
   tags: ['daily-devotional', 'rhapsody-of-realities', 'october-2026'],
@@ -152,5 +154,14 @@ describe('searchDocs', () => {
     const results = searchDocs(docs, 'walked');
     expect(results.map((r) => r.doc.slug)).toEqual(['2026-10-16-righteousness-lived-out']);
     expect(results[0].matchedOn).toBe('message');
+  });
+});
+
+describe('audience', () => {
+  it('matches the audience name, so “teens” is a search and not only a filter', () => {
+    const docs = [doc(), doc({ slug: '2026-10-15-teens-x', title: 'A Teen Reading', audience: 'teens', audienceLabel: 'For Teens' })];
+    const found = searchDocs(docs, 'teens');
+    expect(found).toHaveLength(1);
+    expect(found[0].doc.slug).toBe('2026-10-15-teens-x');
   });
 });

@@ -9,8 +9,16 @@ as its own permalink, searchable, shareable and readable in a feed app.
 > them with attribution on every page, in the RSS feed and in the article's structured data; all rights
 > remain with the publisher. Nothing here is an official LoveWorld property.
 
-The corpus currently spans **61 devotionals**: September 2026 (30 days) and October 2026 (31 days),
-about 20,500 words, extracted from the two PDF editions committed at the repo root.
+On top of that sits the **kids' edition as a magazine**: 9 issues of *Rhapsody of Realities for Kids*
+(RORK), 448 printed pages with their artwork, under `/kids`. It is a different shape — a monthly of
+comics and activities, not a dated article — so it has its own loader, its own routes and its own
+tests; see [The kids' edition](#the-kids-edition).
+
+The devotional corpus currently spans **853 devotionals** — 211,766 words — in three parallel editions of
+the same daily reading: **For Adults** (245 days, March–October 2026), **For Teens** (304 days,
+January–October) and **For Early Readers** (304 days, January–October). Every one of them is
+extracted from the source PDFs: the two published adult months at the repo root, 24 more in
+[`pdf/`](pdf). See [Audiences](#audiences) for how the three are kept apart.
 
 ---
 
@@ -54,12 +62,15 @@ The previous Vite + React 18 SPA ("Meaning", which mirrored Telegram channels) i
 | `auth/` | `AuthProvider` (Worker JWT session) and `RequireRole` (client-side gate) |
 | `hooks/` | `useSavedPosts` — localStorage "my library", synced across tabs |
 | `lib/ads.ts`, `lib/security-headers.ts` | AdSense config (publisher id, slot ids, gating) and the response headers/CSP |
-| `content/devotionals/` | **The published posts.** 61 Markdown files, generated from the PDFs |
+| `content/devotionals/` | **The published posts.** 853 Markdown files — 28 monthly editions across three audiences |
+| `content/kids/` | The kids' edition: one Markdown file per monthly issue, with a page list in its front matter |
+| `public/kids/` | The rendered pages of those issues (30–60 KB each, 12 MB in total), committed so the magazine can be read in a browser |
 | `scripts/extract-devotionals.mjs` | PDF → Markdown extractor, with a `--verify` self-check |
 | `tests/` | Vitest: extractor units, PDF↔Markdown coverage, content layer, search, format, RSS |
 | `worker/` | Cloudflare Worker API (routes, D1 repos, Telegram sync, own test suite) — unchanged |
 | `legacy/` | The previous Vite SPA, kept for reference |
-| `september-2026-rhapsody.pdf`, `october-2026-rhapsody.pdf` | The source editions |
+| `september-2026-rhapsody.pdf`, `october-2026-rhapsody.pdf` | The two source editions already published as posts |
+| `pdf/` | The rest of the source editions: adults March–August, Teens (Teevo) and Early Readers (RORER), plus the Kids issues and non-devotional titles the extractor skips on purpose |
 
 ---
 
@@ -68,13 +79,15 @@ The previous Vite + React 18 SPA ("Meaning", which mirrored Telegram channels) i
 | Route | Renders |
 | --- | --- |
 | `/` | Today's devotional as the hero (falls back to the newest day), edition strip, latest grid |
-| `/devotionals` | The library: JS-free filtering by edition, tag and text, with sort links and pagination |
+| `/devotionals` | The library: JS-free filtering by audience, edition, tag and text, with sort links and pagination |
 | `/devotionals/YYYY-MM-DD-slug` | One article — dated permalink, e.g. `/devotionals/2026-10-10-the-genius-of-christianity` |
-| `/editions` | Both monthly editions with counts and date ranges |
-| `/editions/2026-10` | One edition, day 1 first |
+| `/kids` | The kids' magazine, one card per issue — cover, page count, what OCR had to say |
+| `/kids/2026-04-kids` | One issue, page by page: the printed page, then the words recovered from it (`#page-12` links straight to a page) |
+| `/editions` | Every monthly edition, grouped by audience, with counts and date ranges |
+| `/editions/2026-10`, `/editions/2026-10-teens` | One edition, day 1 first — a readers' edition carries its audience in the slug |
 | `/search` | Client-side search over a compact index (no round-trip); `?q=` is the source of truth |
 | `/about` | Why the site exists — getting the daily word to everyone — plus attribution and provenance |
-| `/feed.xml` | RSS 2.0 carrying each day's **complete** article |
+| `/feed.xml` | RSS 2.0 carrying each day's **complete** article — the adult edition, which is what the channel is named after |
 | `/sitemap.xml`, `/robots.txt`, `/ads.txt` | Generated from the corpus; `ads.txt` authorises Google AdSense |
 | `/login`, `/register` | Worker-backed auth screens |
 | `/account` | Saved devotionals (local, no account needed) + Worker profile, password and sessions |
@@ -93,8 +106,10 @@ The PDFs are the source of truth. Each day occupies a two-page spread whose layo
 to parse precisely — but only by geometry, not by keywords.
 
 ```bash
-npm run content:extract    # parse every PDF at the repo root → content/devotionals/*.md
-npm run content:verify     # same parse, assert every invariant, write nothing
+npm run content:extract                     # parse every edition PDF → content/devotionals/*.md
+npm run content:verify                      # same parse, assert every invariant, write nothing
+npm run content:extract -- --audience teens # one audience only
+npm run content:extract -- --pdf pdf/x.pdf --out /tmp/preview   # one file, written elsewhere
 ```
 
 The extractor (`scripts/extract-devotionals.mjs`) works from font size and position, because the
@@ -113,13 +128,110 @@ printed text alone is ambiguous:
   10pt-or-smaller type in the bottom band — because their wording changes between editions.
 
 Each post's frontmatter keeps its provenance: the headline exactly as printed (`titleOriginal`), the
-source PDF and the two page numbers it came from, the printed weekday, and the closing label.
+source PDF and the page numbers it came from, the printed weekday, and the closing label.
+
+### The kids' edition
+
+RORK is not a daily devotional. Each monthly issue is ~50 pages of comic art, a verse to say, an
+activity and a prayer — and **two pages in five carry no text layer at all**: the words are drawn
+inside the picture. So the unit published here is the *issue*, and a page is published as the page:
+
+```
+content/kids/2026-04-kids.md   →   front matter: one entry per page (image, kind, where the words came from)
+                                 →   body: `## Page N` and the words of that page
+public/kids/2026-04-kids/p07.jpg →  the printed page, rendered from the PDF
+```
+
+Four rules keep it honest:
+
+- **Prefer the print, fall back to recognition.** A page's own text layer is exact, so it wins; a page
+  whose layer is thin is read by OCR (`tesseract.js`) instead, and is stamped `recovered: "ocr"` with
+  its confidence. Below `MIN_OCR_CONFIDENCE` (55) the guess is thrown away and the page is published as
+  artwork — texture is not text. The reader sees a badge per page and a note per issue, because
+  recognised wording has not been checked by hand.
+  The same line is drawn under the issue itself: a card's summary and the verse it quotes are taken only
+  from printed text, so where the verse had to be read off the artwork the issue introduces itself with
+  a plain sentence instead — and the recognised line still appears on its own page, next to its badge.
+- **The magazine's two quirks are handled where they come from.** Its typeface prints most lines twice
+  (a fill and an outline) at the same position — dropped by `linesFromContent` — and its frames clip
+  words mid-word (`TO RULE THE WORL`), which `looksTruncated` flags rather than repairs. A short
+  fragment of *recognised* text (`MIN_PUBLISH_CHARS`) is dropped — a short line that came off the page
+  as printed is not: a strapline is what the page says.
+- **An artwork page that will not decode is admitted, not hidden.** After rendering, every page image
+  is measured for how much of it is ink (`inkRatio`), and an issue whose median falls under
+  `MIN_PAGE_INK` is written with `artworkDecoded: false`: some of these PDFs keep their pictures in
+  JPEG2000, which `@napi-rs/canvas` cannot decode, and their page images come out as words on a white
+  field. The text is unaffected; the site prints the caveat on the issue and badges the pages, rather
+  than quietly serving blank paper.
+
+- **Images are stored small, on purpose.** `--store-width 420` keeps all nine issues at 12 MB and a
+  page legible on a phone, which is enough when the words are also there as text; click a page to open
+  the file itself. Raise it (`npm run content:kids -- --store-width 900`) if you want the artwork at
+  print-ish quality and can carry ~4× the bytes.
+
+```bash
+npm run content:kids          # render + recover every RORK PDF → content/kids + public/kids
+npm run content:kids:verify   # read every page's printed layer and report: writes nothing,
+                              # runs no OCR, and is still slow — it opens all 448 pages
+npm run content:kids:report   # which pages a human should read back, worst first, each linking to
+                              # its own anchor — the recognised pages that are weak or look wrong
+npm run content:kids -- --only april --density 150 --store-width 420   # one issue, or new limits
+```
+
+Nobody proofreads 448 pages. `--report` reads the published front matter and prints the 60-odd pages
+whose recognised text is either low-confidence or carries a mark the print never has — a one-letter
+word, a stray rule from a word-search box — worst first, so the checking starts where it pays. The
+line a card quotes is held to a stricter rule than a page's body: see the first rule above.
+
+Tesseract prints `Image too small to scale!!` on pages that are mostly artwork — that is Leptonica
+explaining why it found nothing on a thin strip, not a failure. The rights position is the same as the
+rest of the site: attribution on every page, all rights with Loveworld Publishing — but this section
+reproduces *artwork*, not just the daily text, so it is the part to clear with the publisher first if
+this goes somewhere public.
+
+### Audiences
+
+Three editions of Rhapsody are parsed into one corpus, and the audience is part of a post's identity.
+
+| Audience | Frontmatter | Edition slug | What the printed page carries |
+| --- | --- | --- | --- |
+| For Adults | `audience` omitted (the content layer defaults it) | `2026-10` | message · prayer or confession · further study · both reading plans |
+| For Teens | `audience: teens` | `2026-10-teens` | message · further study · both plans · **Speak** and **Act** closing blocks |
+| For Early Readers | `audience: early-readers` | `2026-10-early-readers` | a short message · a prayer or a confession · further study — no reading plans |
+
+The rules that keep them apart are deliberately boring:
+
+- [`lib/audiences.ts`](lib/audiences.ts) is the app's single source of truth for audience ids, labels
+  and the edition suffix. The extractor keeps its own copy of the same table so pdf.js never reaches
+  the browser bundle, and the two are checked against each other by `npm test`.
+- A readers' post carries its audience *inside* the dated slug — `2026-10-15-teens-my-day-is-blessed`
+  — and inside `edition`. So the teens' October and the adults' October are different editions with
+  different URLs, and the 61 adult posts published before the readers arrived keep `edition: "2026-09"`
+  and their permalinks unchanged.
+- A printed section the schema has no field for travels as `extras: [{ label, text }]` and renders after
+  the closing card; a printed *Confession* is stored as `prayer` with `prayerLabel: "Confession"`. Both
+  survive into the Markdown body and into the RSS item, so nothing printed is lost to a field list.
+- Which edition a PDF belongs to is read from its front matter, not its filename: a name that says one
+  thing and a cover that says another is reported, and a file that says nothing usable is skipped with a
+  reason printed at the end of the run — which is how the Kids (RORK) issues are handled: they are a
+  comic-and-activity magazine rather than a daily reading, so the daily pipeline refuses them and the
+  kids' pipeline below publishes them page by page.
+- Audience is a URL parameter everywhere it is offered — `/devotionals?audience=teens`,
+  `/search?audience=teens` — so a filtered library is linkable and works without JS. An unrecognised
+  value means "all readers", never an error. On an article page, `getDaySiblings` links the same calendar
+  day in the other editions under "The same day, for other readers".
+
+The list of editions on `/devotionals` is scoped to the active audience, so a teens listing never offers
+a month that edition did not publish.
 
 ### Publishing a new month
 
-1. Drop `<month>-<year>-rhapsody.pdf` at the repo root (the extractor discovers every PDF there).
+1. Drop the edition PDF in `pdf/` (the root and `pdf/` are both searched; the readers' editions live
+   there). Naming is free-form — `JULY 2026 RORER.pdf` is as findable as `2026-07-rorer.pdf` — because
+   the edition's own front matter decides its audience and month.
 2. `npm run content:extract` — it writes that month's posts and removes only that month's stale files,
-   so re-running is idempotent.
+   so re-running is idempotent. (`--verify` writes nothing; a run that both verifies and writes needs
+   `--out`.)
 3. `npm test` — the freshness gate fails if the committed Markdown and the PDFs disagree.
 4. Commit the new `content/devotionals/*.md` files. No code changes are needed: routes, sitemap,
    feed and editions all derive from the directory.
@@ -190,13 +302,14 @@ npm run lint
 | --- | --- |
 | `tests/extractor.test.ts` | Title casing, slug generation, excerpt cutting, drop-cap spacing rules |
 | `tests/content-extraction.test.ts` | **The contract with the PDFs**: every day extracted, dates consecutive, printed weekday matching the calendar, all per-day invariants, *no printed line of any spread dropped*, and the committed Markdown byte-for-byte in sync with what the extractor produces |
-| `tests/content.test.ts` | The content layer as the routes see it: ordering, editions, adjacency, hero fallback, filtering, pagination, search index, stats |
+| `tests/kids.test.ts` | The magazine: which month a filename is, the double-drawn text layer, the print-vs-OCR decision and its confidence floor, page numbering, and every committed image existing on disk |
+| `tests/content.test.ts` | The content layer as the routes see it: ordering across audiences, editions grouped by audience, same-day siblings, adjacency within an edition, hero fallback, filtering, pagination, search index, stats |
 | `tests/search.test.ts` | Tokenising and field-weighted ranking |
 | `tests/format.test.ts` | Date and count formatting — never an "Invalid Date" in a page |
 | `tests/rss.test.ts` | A complete article per item, XML escaping, well-formed feed |
 | `tests/ads.test.tsx` | AdSense config and gating, the CSP's ad origins, `ads.txt`, the rendered `ins.adsbygoogle` unit, and the placement policy |
 
-The coverage check is the one that matters: it re-reads both PDFs, rebuilds every visual line of
+The coverage check is the one that matters: it re-reads the September and October adult PDFs, rebuilding every visual line of
 every spread, and asserts that each line of real content appears in the extracted fields — allowing
 a drop-cap line to match once the cap glyph is split back off. Roughly 3,100 printed lines are
 checked; a parsing regression cannot slip through silently.

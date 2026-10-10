@@ -32,7 +32,7 @@ Every so often, declare, “In the Name of the Lord Jesus Christ, I am righteous
 
 But that’s a dangerous mindset because it means basing your confidence or approval with God on personal performance rather than on the finished redemptive work of Christ. God never asked you to establish your own righteousness. The Bible says Jesus was made sin for us so that we might be made the righteousness of God in Him.
 
-Some even think humility means constantly denouncing themselves before God, making statements such as, “Lord, I’m nothing; we’re all so unworthy and unrighteous before you.” But that’s not what God wants. He doesn’t delight in your self-denunciation, self-condemnation or self- recrimination. One was already condemned and crucified for you, and His Name is Jesus; He took your place.
+Some even think humility means constantly denouncing themselves before God, making statements such as, “Lord, I’m nothing; we’re all so unworthy and unrighteous before you.” But that’s not what God wants. He doesn’t delight in your self-denunciation, self-condemnation or self-recrimination. One was already condemned and crucified for you, and His Name is Jesus; He took your place.
 
 Acts 13:38-39 (NKJV) tells us, “Therefore let it be known to you, brethren, that through this Man is preached to you the forgiveness of sins; and by Him everyone who believes is justified from all things from which you could not be justified by the law of Moses.” What God wants is for you to believe in and live according to what Christ accomplished in your behalf. The Apostle Paul says, “...if one died for all, then were all dead” (2 Corinthians 5:14). He died that you might live.
 

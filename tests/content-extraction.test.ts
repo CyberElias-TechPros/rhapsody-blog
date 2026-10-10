@@ -34,7 +34,13 @@ const DIST = path.join(ROOT, 'node_modules/pdfjs-dist');
 GlobalWorkerOptions.workerSrc = path.join(DIST, 'legacy/build/pdf.worker.mjs');
 const FONTS = `${path.join(DIST, 'standard_fonts')}/`;
 
-const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '');
+/**
+ * Fold case and punctuation away so a line matches across whitespace/quote differences. Letters
+ * glued to a digit are folded out of both sides as well: the extractor puts a raised ordinal
+ * marker back ("the 10ᵗʰ verse" -> "10th verse"), which the raw PDF line does not report.
+ */
+const norm = (s: string) =>
+  s.toLowerCase().replace(/(\d)[a-z]{1,3}(?=[^a-z0-9]|$)/g, '$1').replace(/[^a-z0-9]+/g, '');
 
 /** Printed lines that are structure or chrome, not article content. */
 const SKIP_PATTERNS = [

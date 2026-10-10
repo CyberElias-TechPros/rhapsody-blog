@@ -13,9 +13,20 @@
 import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import matter from 'gray-matter';
+import {
+  AUDIENCES,
+  AUDIENCE_ORDER,
+  DEFAULT_AUDIENCE,
+  audienceOfEdition,
+  audienceOrNull,
+  monthOfEdition,
+  type AudienceId,
+} from './audiences';
 import type {
+  AudienceGroup,
   Devotional,
   DevotionalQuery,
+  DevotionalSection,
   DevotionalSort,
   DevotionalSummary,
   Edition,
@@ -47,7 +58,19 @@ function toDevotional(file: string): Devotional {
   const date = required(data, 'date', name);
   const slug = required(data, 'slug', name);
   const edition = required(data, 'edition', name);
-  const [year, month] = edition.split('-').map(Number);
+  const [year, month] = monthOfEdition(edition).split('-').map(Number);
+
+  // Audiences were added after the adult edition was already published, so the key is optional:
+  // a post with no `audience` is an adult one, and its edition slug is the bare month.
+  const audience = audienceOrNull(data.audience) ?? audienceOfEdition(edition);
+  const subtitle = typeof data.subtitle === 'string' && data.subtitle.trim() ? data.subtitle.trim() : undefined;
+  const extras: DevotionalSection[] = Array.isArray(data.extras)
+    ? data.extras
+        .map((entry) => (entry && typeof entry === 'object' ? (entry as Record<string, unknown>) : null))
+        .filter((entry): entry is { label: unknown; text: unknown } => Boolean(entry))
+        .map((entry) => ({ label: String(entry.label ?? '').trim(), text: String(entry.text ?? '').trim() }))
+        .filter((section) => section.label && section.text)
+    : [];
 
   // The body is `message` then the closing sections; the sections are rendered from their own
   // frontmatter fields (as cards), so split them off and keep only the article message.
@@ -67,14 +90,18 @@ function toDevotional(file: string): Devotional {
     dayOfMonth: Number(data.dayOfMonth ?? 0),
     edition,
     editionTitle: String(data.editionTitle ?? `${MONTH_NAMES[month - 1] ?? ''} ${year ?? ''}`.trim()),
+    audience,
+    audienceLabel: String(data.audienceLabel ?? AUDIENCES[audience].label),
     author: String(data.author ?? 'Pastor Chris Oyakhilome'),
     series: String(data.series ?? 'Rhapsody of Realities'),
     kind: String(data.kind ?? 'daily-devotional'),
     excerpt: required(data, 'excerpt', name),
     scripture: String(data.scripture ?? ''),
     scriptureReference: String(data.scriptureReference ?? ''),
+    subtitle,
     prayerLabel: data.prayerLabel === 'Confession' ? 'Confession' : 'Prayer',
     prayer: String(data.prayer ?? ''),
+    extras,
     furtherStudy: String(data.furtherStudy ?? ''),
     oneYearPlan: String(data.oneYearPlan ?? ''),
     twoYearPlan: String(data.twoYearPlan ?? ''),
@@ -95,6 +122,11 @@ function toDevotional(file: string): Devotional {
   if (!devotional.slug.startsWith(devotional.date)) {
     throw new Error(`${name}: slug must be prefixed with the devotional date (${devotional.date}).`);
   }
+  // A teens article and an adult article can share a day; the slug says which audience it is for,
+  // so the two have to agree or the file has been renamed out from under its own front matter.
+  if (!devotional.slug.includes(AUDIENCES[audience].slugToken)) {
+    throw new Error(`${name}: slug does not carry the audience \"${audience}\" its edition belongs to.`);
+  }
   return devotional;
 }
 
@@ -112,8 +144,20 @@ export function getAllDevotionals(): Devotional[] {
     .filter((f) => f.endsWith('.md'))
     .map(toDevotional)
     .filter((p) => p.status === 'published')
-    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : a.slug.localeCompare(b.slug)));
+    .sort(compareRecency);
   return cache;
+}
+
+/**
+ * Newest day first; within one day, the audiences in reading order (the adult edition, then the
+ * editions written for younger readers) and then by slug. The order inside a day is what decides
+ * which article a single-slot surface — the home-page hero, the RSS feed — picks up, so it is
+ * pinned here rather than left to a slug comparison.
+ */
+function compareRecency(a: Devotional, b: Devotional): number {
+  if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+  const byAudience = AUDIENCE_ORDER.indexOf(a.audience) - AUDIENCE_ORDER.indexOf(b.audience);
+  return byAudience !== 0 ? byAudience : a.slug.localeCompare(b.slug);
 }
 
 /** Test helper: drop the memoised corpus (e.g. after writing fixture files). */
@@ -129,6 +173,11 @@ export function getDevotionalBySlug(slug: string): Devotional | undefined {
   return getAllDevotionals().find((p) => p.slug === slug);
 }
 
+/** Every article for one audience, newest day first. */
+export function getDevotionalsByAudience(audience: AudienceId = DEFAULT_AUDIENCE): Devotional[] {
+  return getAllDevotionals().filter((p) => p.audience === audience);
+}
+
 export function getSummary(post: Devotional): DevotionalSummary {
   const { body: _body, message: _message, ...summary } = post;
   return summary;
@@ -139,8 +188,14 @@ export function getAllSummaries(): DevotionalSummary[] {
 }
 
 /** Chronological neighbours — the "yesterday / tomorrow" links on a post page. */
+/**
+ * Chronological neighbours *within the same audience* — a teen reading day 14 is sent to day 15
+ * of the teens edition, not to the adult article for the same date.
+ */
 export function getAdjacentDevotionals(slug: string): { previous?: DevotionalSummary; next?: DevotionalSummary } {
-  const all = getAllDevotionals(); // newest first
+  const post = getDevotionalBySlug(slug);
+  if (!post) return {};
+  const all = getDevotionalsByAudience(post.audience); // newest first
   const index = all.findIndex((p) => p.slug === slug);
   if (index < 0) return {};
   return {
@@ -150,9 +205,10 @@ export function getAdjacentDevotionals(slug: string): { previous?: DevotionalSum
   };
 }
 
-export function getEditions(): Edition[] {
+/** Editions of one audience, newest month first; every audience when called without one. */
+export function getEditions(audience?: AudienceId): Edition[] {
   const byEdition = new Map<string, Devotional[]>();
-  for (const post of getAllDevotionals()) {
+  for (const post of audience ? getDevotionalsByAudience(audience) : getAllDevotionals()) {
     const list = byEdition.get(post.edition) ?? [];
     list.push(post);
     byEdition.set(post.edition, list);
@@ -161,10 +217,18 @@ export function getEditions(): Edition[] {
   return [...byEdition.entries()]
     .map(([slug, posts]) => {
       const sorted = [...posts].sort((a, b) => a.date.localeCompare(b.date));
-      const [year, month] = slug.split('-').map(Number);
+      const audience = sorted[0].audience;
+      const meta = AUDIENCES[audience];
+      // `2026-10` for the adult edition, `2026-10-teens` for the others — the month part is what
+      // carries the year and month number.
+      const [year, month] = monthOfEdition(slug).split('-').map(Number);
+      const title = sorted[0].editionTitle || `${MONTH_NAMES[month - 1]} ${year}`;
       return {
         slug,
-        title: sorted[0].editionTitle || `${MONTH_NAMES[month - 1]} ${year}`,
+        title,
+        audienceTitle: meta.editionSuffix ? `${title} · ${meta.label}` : title,
+        audience,
+        audienceLabel: meta.label,
         year,
         month,
         monthName: MONTH_NAMES[month - 1] ?? slug,
@@ -175,6 +239,27 @@ export function getEditions(): Edition[] {
       } satisfies Edition;
     })
     .sort((a, b) => b.slug.localeCompare(a.slug));
+}
+
+/**
+ * The /editions listing: one block per audience, in reading order, each holding that audience's
+ * months. An audience with no edition in the corpus is left out entirely.
+ */
+export function getEditionGroups(): AudienceGroup[] {
+  const editions = getEditions();
+  return AUDIENCE_ORDER.map((audience) => {
+    const meta = AUDIENCES[audience];
+    const forAudience = editions.filter((edition) => edition.audience === audience);
+    return {
+      audience,
+      label: meta.label,
+      shortLabel: meta.shortLabel,
+      series: meta.series,
+      blurb: meta.blurb,
+      postCount: forAudience.reduce((sum, edition) => sum + edition.postCount, 0),
+      editions: forAudience,
+    };
+  }).filter((group) => group.editions.length > 0);
 }
 
 export function getEdition(slug: string): Edition | undefined {
@@ -189,8 +274,21 @@ export function getDevotionalsByEdition(slug: string): Devotional[] {
  * The devotional for a given day, when the corpus covers it. `today` is injected so the home
  * page stays deterministic in tests and during a build.
  */
-export function getDevotionalForDate(dateIso: string): Devotional | undefined {
-  return getAllDevotionals().find((p) => p.date === dateIso);
+/** The article for a day, in the audience asked for (the adult edition by default). */
+export function getDevotionalForDate(dateIso: string, audience: AudienceId = DEFAULT_AUDIENCE): Devotional | undefined {
+  return getDevotionalsByAudience(audience).find((p) => p.date === dateIso);
+}
+
+/**
+ * The same day in the other audiences — `Also on this day` under an article, so a parent who
+ * landed on the adult reading can find the version their child can read.
+ */
+export function getDaySiblings(slug: string): Devotional[] {
+  const post = getDevotionalBySlug(slug);
+  if (!post) return [];
+  return AUDIENCE_ORDER.filter((audience) => audience !== post.audience)
+    .map((audience) => getDevotionalForDate(post.date, audience))
+    .filter((sibling): sibling is Devotional => Boolean(sibling));
 }
 
 export function todayIso(now = new Date()): string {
@@ -201,20 +299,21 @@ export function todayIso(now = new Date()): string {
  * Home-page hero pick: today's article when we have it, otherwise the most recent one before
  * today, otherwise the newest overall. Always returns something while the corpus is non-empty.
  */
-export function getFeaturedDevotional(now = new Date()): Devotional | undefined {
-  const all = getAllDevotionals();
+export function getFeaturedDevotional(now = new Date(), audience: AudienceId = DEFAULT_AUDIENCE): Devotional | undefined {
+  const all = getDevotionalsByAudience(audience);
   if (!all.length) return undefined;
   const today = todayIso(now);
-  return getDevotionalForDate(today) ?? all.find((p) => p.date <= today) ?? all[0];
+  return getDevotionalForDate(today, audience) ?? all.find((p) => p.date <= today) ?? all[0];
 }
 
 function matchesQuery(post: Devotional, query: DevotionalQuery): boolean {
+  if (query.audience && post.audience !== query.audience) return false;
   if (query.edition && post.edition !== query.edition) return false;
   if (query.tag && !post.tags.includes(query.tag)) return false;
   if (query.q) {
     const needle = query.q.trim().toLowerCase();
     if (!needle) return true;
-    const haystack = [post.title, post.excerpt, post.scripture, post.scriptureReference, post.message.join(' '), post.prayer, post.furtherStudy, post.editionTitle, post.weekday, post.date, post.tags.join(' ')]
+    const haystack = [post.title, post.subtitle, post.excerpt, post.scripture, post.scriptureReference, post.message.join(' '), post.prayer, post.extras.map((section) => `${section.label} ${section.text}`).join(' '), post.furtherStudy, post.editionTitle, post.audienceLabel, post.weekday, post.date, post.tags.join(' ')]
       .join(' ')
       .toLowerCase();
     return haystack.includes(needle);
@@ -254,6 +353,8 @@ export function getSearchIndex(): SearchDoc[] {
     date: p.date,
     edition: p.edition,
     editionTitle: p.editionTitle,
+    audience: p.audience,
+    audienceLabel: p.audienceLabel,
     weekday: p.weekday,
     scriptureReference: p.scriptureReference,
     tags: p.tags,
@@ -274,20 +375,41 @@ export function getAllTags(): { tag: string; count: number }[] {
 }
 
 /** Headline numbers for the home page and /about. */
-export function getContentStats(): {
+export interface ContentStats {
   posts: number;
   editions: number;
   words: number;
   firstDate: string;
   lastDate: string;
-} {
+  /** The same numbers per audience, in reading order, empty audiences left out. */
+  byAudience: {
+    audience: AudienceId;
+    label: string;
+    posts: number;
+    editions: number;
+    words: number;
+  }[];
+}
+
+export function getContentStats(): ContentStats {
   const all = getAllDevotionals();
   const dates = all.map((p) => p.date).sort();
+  const editions = getEditions();
   return {
     posts: all.length,
-    editions: getEditions().length,
+    editions: editions.length,
     words: all.reduce((sum, p) => sum + p.words, 0),
     firstDate: dates[0] ?? '',
     lastDate: dates[dates.length - 1] ?? '',
+    byAudience: AUDIENCE_ORDER.map((audience) => {
+      const posts = all.filter((p) => p.audience === audience);
+      return {
+        audience,
+        label: AUDIENCES[audience].label,
+        posts: posts.length,
+        editions: editions.filter((edition) => edition.audience === audience).length,
+        words: posts.reduce((sum, p) => sum + p.words, 0),
+      };
+    }).filter((entry) => entry.posts > 0),
   };
 }

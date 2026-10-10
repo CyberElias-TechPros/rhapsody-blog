@@ -8,6 +8,7 @@ import { AdSlot } from '@/components/common/AdSlot';
 import { FEED_AD_EVERY } from '@/lib/ads';
 import { PageHeader } from '@/components/common/StateBlocks';
 import { getEdition, getEditions, getDevotionalsByEdition } from '@/lib/content';
+import { AUDIENCES } from '@/lib/audiences';
 import { formatDate } from '@/lib/format';
 import { SITE, absoluteUrl } from '@/lib/site';
 
@@ -29,12 +30,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const url = absoluteUrl(`/editions/${found.slug}`);
   return {
     title: `${found.title} edition`,
-    description: `All ${found.postCount} daily devotionals from the ${found.title} edition of ${SITE.series}.`,
+    description: `All ${found.postCount} daily devotionals from the ${found.title} edition of ${found.audienceLabel ? `${AUDIENCES[found.audience].series}.` : SITE.series}.`,
     alternates: { canonical: url },
     openGraph: {
       type: 'website',
-      title: `${found.title} edition — ${SITE.name}`,
-      description: `All ${found.postCount} daily devotionals from the ${found.title} edition of ${SITE.series}.`,
+      title: `${found.audienceTitle} edition — ${SITE.name}`,
+      description: `All ${found.postCount} daily devotionals from the ${found.title} edition of ${AUDIENCES[found.audience].series}.`,
       url,
       siteName: SITE.name,
       images: [{ url: absoluteUrl(SITE.ogImage), width: 1200, height: 630, alt: found.title }],
@@ -59,9 +60,9 @@ export default async function EditionPage({ params }: Props) {
       </Link>
 
       <PageHeader
-        eyebrow={`${found.postCount} daily devotionals · ${formatDate(found.firstDate)} – ${formatDate(found.lastDate)}`}
+        eyebrow={`${found.audienceLabel} · ${found.postCount} daily devotionals · ${formatDate(found.firstDate)} – ${formatDate(found.lastDate)}`}
         title={`${found.title} edition`}
-        subtitle={`Every day of ${found.monthName} ${found.year}, in order. Extracted from ${found.sourcePdf}.`}
+        subtitle={`Every day of ${found.monthName} ${found.year} of ${AUDIENCES[found.audience].series}, in order. Extracted from ${found.sourcePdf}.`}
       />
 
       <div className="mt-12 grid md:grid-cols-2 lg:grid-cols-3 gap-6">

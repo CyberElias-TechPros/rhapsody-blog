@@ -3,11 +3,13 @@ import type { Metadata } from 'next';
 import { Fragment } from 'react';
 import { DevotionalCard } from '@/components/DevotionalCard';
 import { AdSlot } from '@/components/common/AdSlot';
+import { AudienceTabs } from '@/components/common/AudienceTabs';
 import { FEED_AD_EVERY } from '@/lib/ads';
 import { Pagination } from '@/components/common/Pagination';
 import { EmptyState, PageHeader } from '@/components/common/StateBlocks';
 import { Button } from '@/components/ui/button';
-import { getEditions, queryDevotionals } from '@/lib/content';
+import { getAllDevotionals, getEditions, queryDevotionals } from '@/lib/content';
+import { AUDIENCE_ORDER, AUDIENCES, audienceOrNull, type AudienceId } from '@/lib/audiences';
 import { SITE } from '@/lib/site';
 import type { DevotionalSort } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -16,7 +18,7 @@ const PAGE_SIZE = 12;
 
 export const metadata: Metadata = {
   title: 'All devotionals',
-  description: `Every daily devotional published on ${SITE.name} — newest first, filterable by edition and searchable.`,
+  description: `Every daily devotional published on ${SITE.name} — newest first, filterable by audience and edition, and searchable.`,
   alternates: { canonical: '/devotionals' },
 };
 
@@ -29,19 +31,32 @@ export default async function DevotionalsPage({ searchParams }: { searchParams: 
   const params = await searchParams;
   const edition = one(params.edition);
   const q = one(params.q);
+  // `?audience=` picks the edition family; an unknown value is the same as not asking.
+  const audience = audienceOrNull(one(params.audience));
   const sort = (one(params.sort) as DevotionalSort) ?? 'new';
   const page = Math.max(1, Number.parseInt(one(params.page) ?? '1', 10) || 1);
 
-  const result = queryDevotionals({ edition, q, sort, page, limit: PAGE_SIZE });
-  const editions = getEditions();
+  const result = queryDevotionals({ audience, edition, q, sort, page, limit: PAGE_SIZE });
+  // The chips list only what the chosen audience actually has, so a teens listing never offers a
+  // month its own edition skipped.
+  const editions = getEditions().filter((e) => !audience || e.audience === audience);
   const activeEdition = editions.find((e) => e.slug === edition);
+  const corpus = getAllDevotionals();
+  const counts = AUDIENCE_ORDER.reduce<Partial<Record<AudienceId, number>>>(
+    (tally, id) => ({ ...tally, [id]: corpus.filter((p) => p.audience === id).length }),
+    {}
+  );
 
-  const hrefFor = (overrides: Partial<{ edition?: string; q?: string; sort: string; page: number }>) => {
+  const hrefFor = (
+    overrides: Partial<{ audience?: AudienceId; edition?: string; q?: string; sort: string; page: number }>
+  ) => {
     const sp = new URLSearchParams();
+    const nextAudience = 'audience' in overrides ? overrides.audience : audience;
     const nextEdition = 'edition' in overrides ? overrides.edition : edition;
     const nextQ = 'q' in overrides ? overrides.q : q;
     const nextSort = overrides.sort ?? sort;
     const nextPage = overrides.page ?? 1;
+    if (nextAudience) sp.set('audience', nextAudience);
     if (nextEdition) sp.set('edition', nextEdition);
     if (nextQ) sp.set('q', nextQ);
     if (nextSort !== 'new') sp.set('sort', nextSort);
@@ -53,14 +68,24 @@ export default async function DevotionalsPage({ searchParams }: { searchParams: 
   return (
     <div className="container py-16 md:py-20">
       <PageHeader
-        eyebrow={activeEdition ? activeEdition.title : 'The library'}
+        eyebrow={activeEdition ? activeEdition.audienceTitle : audience ? AUDIENCES[audience].label : 'The library'}
         title={activeEdition ? `${activeEdition.postCount} devotionals` : 'Every daily devotional'}
         subtitle={
           activeEdition
-            ? `The complete ${activeEdition.title} edition — one article for each day of the month.`
-            : `${SITE.series} by ${SITE.author}, published here one day at a time. ${result.total} articles and counting.`
+            ? `The complete ${activeEdition.title} edition — one article for each day it covers.`
+            : audience
+              ? `${AUDIENCES[audience].series}: ${AUDIENCES[audience].blurb}`
+              : `${SITE.series} by ${SITE.author}, published here one day at a time for every reader in the household. ${result.total} articles and counting.`
         }
       />
+
+      <div className="mt-8">
+        <AudienceTabs
+          active={audience ?? 'all'}
+          counts={counts}
+          hrefFor={(next) => hrefFor({ audience: next === 'all' ? undefined : next, edition: undefined, page: 1 })}
+        />
+      </div>
 
       {/* Filters — plain links and a GET form, so the listing works and is crawlable without JS. */}
       <div className="mt-10 flex flex-col lg:flex-row lg:items-center gap-4 lg:justify-between">
@@ -94,6 +119,7 @@ export default async function DevotionalsPage({ searchParams }: { searchParams: 
 
         <div className="flex flex-wrap items-center gap-3">
           <form action="/devotionals" method="get" role="search" className="flex items-center gap-2">
+            {audience && <input type="hidden" name="audience" value={audience} />}
             {edition && <input type="hidden" name="edition" value={edition} />}
             {sort !== 'new' && <input type="hidden" name="sort" value={sort} />}
             <label htmlFor="q" className="sr-only">
@@ -138,7 +164,7 @@ export default async function DevotionalsPage({ searchParams }: { searchParams: 
         {q ? (
           <>
             {result.total} result{result.total === 1 ? '' : 's'} for “{q}”
-            {activeEdition ? ` in ${activeEdition.title}` : ''} —{' '}
+            {activeEdition ? ` in ${activeEdition.audienceTitle}` : ''} —{' '}
             <Link href={hrefFor({ q: undefined, page: 1 })} className="text-primary hover:underline">
               clear
             </Link>
@@ -146,7 +172,7 @@ export default async function DevotionalsPage({ searchParams }: { searchParams: 
         ) : (
           <>
             Showing {result.items.length} of {result.total} devotionals
-            {activeEdition ? ` in ${activeEdition.title}` : ''}
+            {activeEdition ? ` in ${activeEdition.audienceTitle}` : ''}
           </>
         )}
       </p>
@@ -158,10 +184,12 @@ export default async function DevotionalsPage({ searchParams }: { searchParams: 
             hint={
               q
                 ? 'Try a shorter phrase, a book of the Bible (e.g. “Romans”), or clear the filters.'
-                : 'Add a monthly edition PDF to the repository root and run `npm run content:extract`.'
+                : audience
+                  ? `The ${AUDIENCES[audience].label.toLowerCase()} edition has no month in the library yet — add its PDF to \`pdf/\` and run \`npm run content:extract\`.`
+                  : 'Add a monthly edition PDF to the repository root and run `npm run content:extract`.'
             }
             action={
-              q || edition ? (
+              q || edition || audience ? (
                 <Button asChild variant="outline" size="sm">
                   <Link href="/devotionals">Clear filters</Link>
                 </Button>
