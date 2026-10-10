@@ -1,6 +1,9 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { Fragment } from 'react';
 import { DevotionalCard } from '@/components/DevotionalCard';
+import { AdSlot } from '@/components/common/AdSlot';
+import { FEED_AD_EVERY } from '@/lib/ads';
 import { Pagination } from '@/components/common/Pagination';
 import { EmptyState, PageHeader } from '@/components/common/StateBlocks';
 import { Button } from '@/components/ui/button';
@@ -168,7 +171,14 @@ export default async function DevotionalsPage({ searchParams }: { searchParams: 
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {result.items.map((post, i) => (
-              <DevotionalCard key={post.slug} post={post} index={i} />
+              <Fragment key={post.slug}>
+                <DevotionalCard post={post} index={i} />
+                {/* In-feed units: the natural rhythm of a 12-card page, full-width so a card
+                    never gets squeezed beside an ad. */}
+                {(i + 1) % FEED_AD_EVERY === 0 && (
+                  <AdSlot position="feed" format="fluid" className="md:col-span-2 lg:col-span-3" />
+                )}
+              </Fragment>
             ))}
           </div>
         )}

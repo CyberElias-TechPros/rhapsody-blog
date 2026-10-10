@@ -47,11 +47,13 @@ The previous Vite + React 18 SPA ("Meaning", which mirrored Telegram channels) i
 
 | Path | What it is |
 | --- | --- |
-| `app/` | Next.js App Router: routes, layouts, `sitemap.ts`, `robots.ts`, `feed.xml/route.ts` |
+| `app/` | Next.js App Router: layouts, `sitemap.ts`, `robots.ts`, `feed.xml/route.ts`, and the sign-in/account/admin routes |
+| `app/(public)/` | Route group for the reading side of the site (home, library, editions, search, about) — and the only place the AdSense loader is rendered |
 | `components/` | UI: `layout/`, `common/`, `ui/` (shadcn-style primitives), `devotional/`, `search/`, `screens/` |
 | `lib/` | `content.ts` (Markdown → typed data), `search.ts`, `rss.ts`, `format.ts`, `site.ts`, `api.ts` (Worker client), `types.ts` |
 | `auth/` | `AuthProvider` (Worker JWT session) and `RequireRole` (client-side gate) |
 | `hooks/` | `useSavedPosts` — localStorage "my library", synced across tabs |
+| `lib/ads.ts`, `lib/security-headers.ts` | AdSense config (publisher id, slot ids, gating) and the response headers/CSP |
 | `content/devotionals/` | **The published posts.** 61 Markdown files, generated from the PDFs |
 | `scripts/extract-devotionals.mjs` | PDF → Markdown extractor, with a `--verify` self-check |
 | `tests/` | Vitest: extractor units, PDF↔Markdown coverage, content layer, search, format, RSS |
@@ -71,9 +73,9 @@ The previous Vite + React 18 SPA ("Meaning", which mirrored Telegram channels) i
 | `/editions` | Both monthly editions with counts and date ranges |
 | `/editions/2026-10` | One edition, day 1 first |
 | `/search` | Client-side search over a compact index (no round-trip); `?q=` is the source of truth |
-| `/about` | What this is, how the corpus is built, the attribution |
+| `/about` | Why the site exists — getting the daily word to everyone — plus attribution and provenance |
 | `/feed.xml` | RSS 2.0 carrying each day's **complete** article |
-| `/sitemap.xml`, `/robots.txt` | Generated from the corpus |
+| `/sitemap.xml`, `/robots.txt`, `/ads.txt` | Generated from the corpus; `ads.txt` authorises Google AdSense |
 | `/login`, `/register` | Worker-backed auth screens |
 | `/account` | Saved devotionals (local, no account needed) + Worker profile, password and sessions |
 | `/admin` | Worker console: channel sync, post moderation, subscribers, users, audit log |
@@ -124,10 +126,62 @@ source PDF and the two page numbers it came from, the printed weekday, and the c
 
 ---
 
+## Advertising
+
+Google AdSense is wired in two layers, and both are off in development by default.
+
+1. **Auto ads.** `components/common/AdScript.tsx` renders Google's snippet
+   (`adsbygoogle.js?client=ca-pub-9117572925263537`) as a real `<script async>`, so it is present in
+   the **served HTML** — that is what AdSense checks when it verifies a domain, and what Auto ads need
+   to place units. It is deliberately *not* `next/script`: `afterInteractive` only emits a
+   `<link rel="preload">` server-side and injects the tag after hydration, and Next's
+   `data-nscript` attribute makes AdSense's loader log `AdSense head tag doesn't support
+   data-nscript attribute`. React 19 hoists the plain `async` script into `<head>` and de-duplicates
+   it by `src`; `tests/ads.test.tsx` fails if that regresses.
+
+   The loader is rendered from **`app/(public)/layout.tsx`**, not the root layout, so it never loads
+   on `/login`, `/register`, `/account` or `/admin` — Auto ads cannot place a unit on a page that
+   never receives the script. Those routes sit directly under `app/`, outside the group.
+2. **Hand-placed units.** `components/common/AdSlot.tsx` renders the standard `ins.adsbygoogle`
+   element and queues one fill per element. Positions are configured in `lib/ads.ts`:
+
+| Position | Where it appears | Slot env var |
+| --- | --- | --- |
+| `feed` | In the card grids — home ("Latest", mid-grid), `/devotionals` and `/editions/<slug>` every 6 cards, search results below the list | `NEXT_PUBLIC_ADSENSE_SLOT_FEED` |
+| `article` | Below the devotional on `/devotionals/<slug>`: after the reading plans and source attribution (before the previous/next day links), and after "More from this edition" | `NEXT_PUBLIC_ADSENSE_SLOT_ARTICLE` |
+| `page` | Bottom of `/about`, before the closing call to action | `NEXT_PUBLIC_ADSENSE_SLOT_PAGE` |
+
+**Nothing is placed inside a devotional.** The sequence scripture → message → prayer/confession →
+further study → reading plans is never interrupted, and no ad appears on `/login`, `/register`,
+`/account`, `/admin` (outside the public group entirely), in the RSS feed, or on a "no results"
+screen. `tests/ads.test.tsx` asserts
+this against the route sources, so a careless edit fails CI rather than quietly degrading the
+reading experience.
+
+Each unit reserves its height, so a filling ad cannot shift the reading plans or the day links
+(Core Web Vitals), and it is labelled "Advertisement" to keep it visually separate from editorial
+content. Until a slot id exists for a position, that position renders nothing at all — no empty box.
+
+To go live, create three responsive ad units in AdSense and set the `NEXT_PUBLIC_ADSENSE_SLOT_*`
+variables (see `.env.example`). `public/ads.txt` already authorises `pub-9117572925263537`; AdSense
+flags a domain as "needs attention" without it.
+
+The CSP in `lib/security-headers.ts` allows the AdSense origins in `script-src` and the creative
+iframes in `frame-src`. Google adds hosts from time to time — if the console reports a violation
+for an ad script, add that origin to `AD_SCRIPT_ORIGINS` rather than loosening the directive.
+
+To preview placements locally:
+
+```bash
+NEXT_PUBLIC_ADS_ENABLED=true NEXT_PUBLIC_ADSENSE_SLOT_FEED=1234567890 npm run dev
+```
+
+---
+
 ## Tests
 
 ```bash
-npm test          # 91 tests
+npm test          # 116 tests
 npm run typecheck
 npm run lint
 ```
@@ -140,6 +194,7 @@ npm run lint
 | `tests/search.test.ts` | Tokenising and field-weighted ranking |
 | `tests/format.test.ts` | Date and count formatting — never an "Invalid Date" in a page |
 | `tests/rss.test.ts` | A complete article per item, XML escaping, well-formed feed |
+| `tests/ads.test.tsx` | AdSense config and gating, the CSP's ad origins, `ads.txt`, the rendered `ins.adsbygoogle` unit, and the placement policy |
 
 The coverage check is the one that matters: it re-reads both PDFs, rebuilds every visual line of
 every spread, and asserts that each line of real content appears in the extracted fields — allowing
@@ -176,6 +231,7 @@ The rewrite exists so the browser keeps talking to a single origin in developmen
 | `NEXT_PUBLIC_SITE_URL` | Canonical origin for `og:url`, canonicals, `sitemap.xml` and the feed |
 | `NEXT_PUBLIC_API_URL` | Deployed Worker API base, including `/api` |
 | `WORKER_DEV_URL` | Dev only — same-origin rewrites to a local `wrangler dev` |
+| `NEXT_PUBLIC_ADSENSE_CLIENT`, `NEXT_PUBLIC_ADSENSE_SLOT_*`, `NEXT_PUBLIC_ADS_ENABLED` | AdSense publisher id, per-position slot ids, and an on/off override |
 
 The JWT lives in `localStorage['meaning.auth.token']` (the key is unchanged, so an existing Worker
 session keeps working). A `401` dispatches a `meaning:unauthorized` event, which the auth provider

@@ -2,7 +2,9 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { ArrowRight, BookOpen, CalendarDays, Library, Sparkles } from 'lucide-react';
+import { Fragment } from 'react';
 import { DevotionalCard } from '@/components/DevotionalCard';
+import { AdSlot } from '@/components/common/AdSlot';
 import { NewsletterForm } from '@/components/common/NewsletterForm';
 import { Button } from '@/components/ui/button';
 import {
@@ -157,7 +159,11 @@ export default function HomePage() {
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {rest.map((post, i) => (
-              <DevotionalCard key={post.slug} post={post} index={i} />
+              <Fragment key={post.slug}>
+                <DevotionalCard post={post} index={i} />
+                {/* One unit mid-grid: the hero and the newsletter CTA stay ad-free. */}
+                {i === 2 && <AdSlot position="feed" format="fluid" className="md:col-span-2 lg:col-span-3" />}
+              </Fragment>
             ))}
           </div>
         )}

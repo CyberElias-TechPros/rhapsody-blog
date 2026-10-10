@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import { ArrowLeft, BookMarked, CalendarDays, Clock, FileText, Hash } from 'lucide-react';
 import { Markdown } from '@/components/Markdown';
 import { DevotionalCard } from '@/components/DevotionalCard';
+import { AdSlot } from '@/components/common/AdSlot';
 import { DayNav } from '@/components/devotional/DayNav';
 import { SaveButton } from '@/components/devotional/SaveButton';
 import { ShareRow } from '@/components/devotional/ShareRow';
@@ -191,6 +192,10 @@ export default async function DevotionalPage({ params }: Props) {
           </span>
         </p>
 
+        {/* Below the whole devotional — message, prayer, further study and reading plans are
+            never interrupted by an ad unit. */}
+        <AdSlot position="article" className="mt-10" minHeight={120} />
+
         <DayNav previous={previous} next={next} />
       </div>
 
@@ -217,6 +222,8 @@ export default async function DevotionalPage({ params }: Props) {
             </Link>
             .
           </p>
+
+          <AdSlot position="article" className="mt-10" minHeight={120} />
         </section>
       )}
     </article>

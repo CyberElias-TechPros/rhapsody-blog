@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useMemo, useState, type FormEvent } from 'react';
 import { CalendarDays, Search, SearchX } from 'lucide-react';
+import { AdSlot } from '@/components/common/AdSlot';
 import { Button } from '@/components/ui/button';
 import { formatDateShort } from '@/lib/format';
 import { searchDocs } from '@/lib/search';
@@ -144,6 +145,9 @@ function SearchInner({ docs, initialQuery }: { docs: SearchDoc[]; initialQuery: 
                 </li>
               ))}
             </ol>
+
+            {/* Only alongside results — never on an empty or "no matches" screen. */}
+            <AdSlot position="feed" className="mt-8" minHeight={120} />
           </>
         )}
       </div>

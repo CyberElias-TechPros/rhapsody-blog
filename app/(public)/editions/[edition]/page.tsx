@@ -2,7 +2,10 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { ArrowLeft } from 'lucide-react';
+import { Fragment } from 'react';
 import { DevotionalCard } from '@/components/DevotionalCard';
+import { AdSlot } from '@/components/common/AdSlot';
+import { FEED_AD_EVERY } from '@/lib/ads';
 import { PageHeader } from '@/components/common/StateBlocks';
 import { getEdition, getEditions, getDevotionalsByEdition } from '@/lib/content';
 import { formatDate } from '@/lib/format';
@@ -63,7 +66,12 @@ export default async function EditionPage({ params }: Props) {
 
       <div className="mt-12 grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {posts.map((post, i) => (
-          <DevotionalCard key={post.slug} post={post} index={i} />
+          <Fragment key={post.slug}>
+            <DevotionalCard post={post} index={i} />
+            {(i + 1) % FEED_AD_EVERY === 0 && (
+              <AdSlot position="feed" format="fluid" className="md:col-span-2 lg:col-span-3" />
+            )}
+          </Fragment>
         ))}
       </div>
 
