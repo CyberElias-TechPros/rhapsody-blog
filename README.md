@@ -280,7 +280,15 @@ flags a domain as "needs attention" without it.
 
 The CSP in `lib/security-headers.ts` allows the AdSense origins in `script-src` and the creative
 iframes in `frame-src`. Google adds hosts from time to time — if the console reports a violation
-for an ad script, add that origin to `AD_SCRIPT_ORIGINS` rather than loosening the directive.
+for an ad script, add that origin to `AD_SCRIPT_ORIGINS` rather than loosening the directive; a
+violation that names `frame-src` belongs in `AD_FRAME_ORIGINS` instead. The Ad Traffic Quality
+(Sodar) hosts are the easy ones to miss, because the frame they open is not an ad — block it and
+`sodar2.js` follows up with a confusing `postMessage … origin ('null')` error of its own.
+
+Cloudflare's own analytics tag needs the same treatment: Web Analytics automatic setup appends
+`https://static.cloudflareinsights.com/beacon.min.js` to every HTML response *at the edge*, so the
+tag is nowhere in this repository and the CSP has to allow its host explicitly
+(`ANALYTICS_SCRIPT_ORIGINS`).
 
 To preview placements locally:
 
@@ -367,7 +375,10 @@ Two things worth knowing:
   HSTS, `X-Frame-Options: DENY`, `nosniff`, referrer and permissions policies, plus a CSP. The CSP
   keeps `'unsafe-inline'` for scripts and styles because the App Router emits inline RSC and
   hydration scripts; tightening it to nonces means generating them per request in a `proxy.ts` and
-  threading them through the metadata API — deliberate work, not a config flag.
+  threading them through the metadata API — deliberate work, not a config flag. It also allowlists
+  the AdSense hosts (`AD_SCRIPT_ORIGINS`, `AD_FRAME_ORIGINS`) and Cloudflare's edge-injected Web
+  Analytics beacon (`ANALYTICS_SCRIPT_ORIGINS`); dropping one of those surfaces only as a console
+  violation, so `tests/ads.test.tsx` asserts every origin is still in the served policy.
 - **Fonts and OG images are runtime/static.** `next/font/google` fetches font files at build time,
   which fails in offline builds, so the root layout links Google Fonts with `preconnect` and the
   Tailwind stacks fall back to Georgia/system-ui. Open Graph uses a static `public/og.jpg` rather
