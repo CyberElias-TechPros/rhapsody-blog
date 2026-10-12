@@ -76,9 +76,8 @@ export default function EditionsPage() {
           ))}
         </ul>
         <p className="mt-4">
-          Adding a month is one command: drop the edition PDF in <code className="text-foreground">pdf/</code> and run{' '}
-          <code className="text-foreground">npm run content:extract</code>. Every daily article becomes a post, verified
-          against the source pages — the reader the edition is written for is read off its name.
+          Each edition is published here in full — every day of the month, in the order it is
+          printed, word for word. A new month appears as soon as its edition is released.
         </p>
       </div>
     </div>

@@ -185,8 +185,8 @@ export default async function DevotionalsPage({ searchParams }: { searchParams: 
               q
                 ? 'Try a shorter phrase, a book of the Bible (e.g. “Romans”), or clear the filters.'
                 : audience
-                  ? `The ${AUDIENCES[audience].label.toLowerCase()} edition has no month in the library yet — add its PDF to \`pdf/\` and run \`npm run content:extract\`.`
-                  : 'Add a monthly edition PDF to the repository root and run `npm run content:extract`.'
+                  ? `Nothing has been published for the ${AUDIENCES[audience].label.toLowerCase()} edition yet. Try another edition, or clear the filters.`
+                  : 'The library is empty for now. Every daily devotional appears here as its edition is published.'
             }
             action={
               q || edition || audience ? (

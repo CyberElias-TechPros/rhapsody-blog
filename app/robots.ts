@@ -8,7 +8,9 @@ export default function robots(): MetadataRoute.Robots {
         userAgent: '*',
         allow: '/',
         // Account and admin screens are Worker-backed and not part of the public corpus.
-        disallow: ['/account', '/admin', '/login', '/register'],
+        // `/library` is deliberately *not* disallowed: it is per-device and already `noindex`,
+        // and a crawler that is blocked from fetching it can never see that tag.
+        disallow: ['/account', '/admin', '/login', '/register', '/api/'],
       },
     ],
     sitemap: absoluteUrl('/sitemap.xml'),

@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { getAllDevotionals, getEditions } from '@/lib/content';
+import { getAllResources } from '@/lib/resources';
 import { getAllIssues } from '@/lib/kids';
 import { absoluteUrl } from '@/lib/site';
 
@@ -17,7 +18,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: absoluteUrl('/editions'), lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
     { url: absoluteUrl('/search'), lastModified: now, changeFrequency: 'monthly', priority: 0.4 },
     { url: absoluteUrl('/kids'), lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
+    { url: absoluteUrl('/resources'), lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
+    // The day's plans change daily, and so does the page that answers for them.
+    { url: absoluteUrl('/reading-plans'), lastModified: now, changeFrequency: 'daily', priority: 0.7 },
     { url: absoluteUrl('/about'), lastModified: now, changeFrequency: 'monthly', priority: 0.4 },
+    // Not listed: `/today` (a redirect to a different article every day) and `/library`
+    // (a per-device page, marked noindex). Both would be duplicate or private URLs.
   ];
 
   // The kids' edition is an issue per page, not an article per day (see lib/kids.ts).
@@ -44,7 +50,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.8,
   }));
 
-  return [...staticRoutes, ...editionRoutes, ...kidsRoutes, ...postRoutes];
+  // Books and programme notes: permanent documents, so they are indexed like editions.
+  const resourceRoutes: MetadataRoute.Sitemap = getAllResources().map((resource) => ({
+    url: absoluteUrl(`/resources/${resource.slug}`),
+    lastModified: resource.date ? new Date(`${resource.date}T05:00:00.000Z`) : now,
+    changeFrequency: 'yearly',
+    priority: 0.6,
+  }));
+
+  return [...staticRoutes, ...editionRoutes, ...kidsRoutes, ...resourceRoutes, ...postRoutes];
 }
 
 export const dynamic = 'force-static';
