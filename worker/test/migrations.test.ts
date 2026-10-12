@@ -7,10 +7,10 @@ useSchema();
 describe("schema", () => {
   it("applies D1 migrations automatically (tables + seeds exist)", async () => {
     const tables = await env.DB.prepare(
-      "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('users','posts','channels','subscribers','bookmarks','audit_logs','posts_fts')"
+      "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('users','posts','channels','subscribers','bookmarks','audit_logs','posts_fts','digest_runs')"
     ).all<{ name: string }>();
     expect((tables.results ?? []).map((r) => r.name).sort()).toEqual(
-      ["audit_logs", "bookmarks", "channels", "posts", "posts_fts", "subscribers", "users"]
+      ["audit_logs", "bookmarks", "channels", "digest_runs", "posts", "posts_fts", "subscribers", "users"]
     );
     const chans = await env.DB.prepare("SELECT COUNT(*) AS n FROM channels").first<{ n: number }>();
     expect(chans?.n).toBe(5); // seed channels from migration

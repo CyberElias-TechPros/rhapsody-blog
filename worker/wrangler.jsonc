@@ -29,12 +29,25 @@
     }
   ],
   "triggers": {
-    "crons": ["*/15 * * * *"]
+    // Two crons, told apart by the expression Cloudflare passes to `scheduled()`:
+    //   */15 * * * *  Telegram sync
+    //   0 4 * * *     daily digest email — 04:00 UTC is 05:00 in Lagos, the site's own
+    //                 timezone, one hour after the day rolls over (src/services/digest.ts).
+    "crons": ["*/15 * * * *", "0 4 * * *"]
   },
   "vars": {
-    "ALLOWED_ORIGINS": "http://localhost:8080,https://meaning.vercel.app,*.vercel.app",
-    "SITE_URL": "https://meaning.vercel.app",
-    "MAX_UPLOAD_BYTES": "5242880"
+    // Origins allowed to call this API from a browser. localhost:3000 is `next dev`;
+    // *.vercel.app covers branch previews. Add the production domain before deploying.
+    "ALLOWED_ORIGINS": "http://localhost:3000,http://127.0.0.1:3000,*.vercel.app",
+    // The deployed FRONTEND origin (not this Worker's). The daily digest fetches
+    // GET {SITE_URL}/api/today?full=1 from here, and misc routes build absolute post links
+    // with it. Empty until it is set — the digest then skips rather than guessing a site.
+    "SITE_URL": "",
+    "MAX_UPLOAD_BYTES": "5242880",
+    // Outbound email for the digest. Set EMAIL_API_URL and EMAIL_FROM here; EMAIL_API_KEY is
+    // a secret — `wrangler secret put EMAIL_API_KEY`. All three, or nothing is sent.
+    "EMAIL_API_URL": "",
+    "EMAIL_FROM": ""
   },
   "placement": {
     "mode": "smart"
