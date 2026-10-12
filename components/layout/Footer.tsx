@@ -63,8 +63,28 @@ export function Footer() {
           <h4 className="font-semibold mb-3">Explore</h4>
           <ul className="space-y-2 text-sm text-muted-foreground">
             <li>
+              <Link href="/today" className="hover:text-primary transition-colors">
+                Today&rsquo;s devotional
+              </Link>
+            </li>
+            <li>
               <Link href="/devotionals" className="hover:text-primary transition-colors">
                 All devotionals
+              </Link>
+            </li>
+            <li>
+              <Link href="/reading-plans" className="hover:text-primary transition-colors">
+                Bible reading plans
+              </Link>
+            </li>
+            <li>
+              <Link href="/resources" className="hover:text-primary transition-colors">
+                Books and resources
+              </Link>
+            </li>
+            <li>
+              <Link href="/library" className="hover:text-primary transition-colors">
+                My saved devotionals
               </Link>
             </li>
             <li>

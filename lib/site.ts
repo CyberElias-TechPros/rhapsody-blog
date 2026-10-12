@@ -21,11 +21,17 @@ export const SITE = {
     'Articles are taken from the Rhapsody of Realities monthly editions by Pastor Chris Oyakhilome, © LoveWorld Publishing. Reproduced here with attribution; all rights remain with the publisher.',
 } as const;
 
+/**
+ * The main navigation. "Today" comes first because it is the reason anyone opens the site, and
+ * there is no "Home" item: the logo is the home link, and the bar has to fit six labels next to
+ * a search box at 1024px. The mobile sheet adds Home back, where there is room for it.
+ */
 export const NAV_LINKS = [
-  { href: '/', label: 'Home' },
+  { href: '/today', label: 'Today' },
   { href: '/devotionals', label: 'Devotionals' },
   { href: '/editions', label: 'Editions' },
   { href: '/kids', label: 'For Kids' },
+  { href: '/resources', label: 'Resources' },
   { href: '/about', label: 'About' },
 ] as const;
 

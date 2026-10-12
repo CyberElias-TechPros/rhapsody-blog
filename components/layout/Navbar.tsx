@@ -55,7 +55,7 @@ export function Navbar() {
 
   const linkClass = (href: string) =>
     cn(
-      'px-3 py-2 rounded-md text-sm font-medium transition-colors',
+      'px-2.5 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap',
       isActive(href) ? 'text-primary' : 'text-foreground/70 hover:text-foreground'
     );
 
@@ -91,7 +91,7 @@ export function Navbar() {
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search devotionals..."
               aria-label="Search devotionals"
-              className="pl-9 pr-3 py-2 rounded-full bg-secondary/70 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-primary/40"
+              className="pl-9 pr-3 py-2 rounded-full bg-secondary/70 text-sm w-44 xl:w-64 focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
           </form>
 
@@ -116,13 +116,13 @@ export function Navbar() {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link href="/account" className="flex items-center gap-2">
-                    <UserCircle2 className="w-4 h-4" aria-hidden="true" /> My library
+                  <Link href="/library" className="flex items-center gap-2">
+                    <Bookmark className="w-4 h-4" aria-hidden="true" /> Saved devotionals
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/account?tab=saved" className="flex items-center gap-2">
-                    <Bookmark className="w-4 h-4" aria-hidden="true" /> Saved devotionals
+                  <Link href="/account" className="flex items-center gap-2">
+                    <UserCircle2 className="w-4 h-4" aria-hidden="true" /> My account
                   </Link>
                 </DropdownMenuItem>
                 {hasRole(user, ['editor', 'admin']) && (
@@ -184,6 +184,14 @@ export function Navbar() {
                 />
               </form>
               <div className="mt-4 flex flex-col gap-1">
+                {/* The bar has no Home item — the logo covers it — but the sheet has room. */}
+                <Link
+                  href="/"
+                  onClick={() => setSheetOpen(false)}
+                  className={cn('px-3 py-3 rounded-md text-base', isActive('/') ? 'bg-secondary text-primary font-medium' : 'hover:bg-secondary/60')}
+                >
+                  Home
+                </Link>
                 {NAV_LINKS.map((l) => (
                   <Link
                     key={l.href}

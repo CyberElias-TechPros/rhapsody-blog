@@ -12,7 +12,7 @@ export function AccountLinks() {
     <>
       <li>
         <Link href="/account" className="hover:text-primary transition-colors">
-          My library
+          My account
         </Link>
       </li>
       {hasRole(user, ['editor', 'admin']) && (
