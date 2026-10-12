@@ -1,19 +1,25 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { ArrowRight, BookOpen, CalendarDays, Library, Sparkles } from 'lucide-react';
+import { ArrowRight, BookOpen, CalendarDays, Layers, Library, Sparkles } from 'lucide-react';
 import { Fragment } from 'react';
 import { DevotionalCard } from '@/components/DevotionalCard';
 import { AdSlot } from '@/components/common/AdSlot';
 import { NewsletterForm } from '@/components/common/NewsletterForm';
 import { Button } from '@/components/ui/button';
 import {
-  getAllDevotionals,
   getContentStats,
   getDevotionalForDate,
   getEditions,
+  getFeaturedDevotional,
+  getLatestDevotionals,
+  getReadingPlanFor,
+  siteTimeZone,
   todayIso,
 } from '@/lib/content';
+import { devotionalScript } from '@/lib/tts';
+import { DayRollover } from '@/components/home/DayRollover';
+import { ListenButton } from '@/components/audio/ListenButton';
 import { getKidsStats } from '@/lib/kids';
 import { AUDIENCE_ORDER, AUDIENCES } from '@/lib/audiences';
 import { AudienceBadge } from '@/components/common/AudienceBadge';
@@ -26,17 +32,35 @@ export const metadata: Metadata = {
   alternates: { canonical: '/' },
 };
 
+/**
+ * The front page answers "what is today's devotional?", and an answer computed at build time is
+ * wrong by the next morning — a prerender frozen on the day the image was built is exactly how a
+ * site ends up showing the 10th of October forever. So this one route renders per request: the
+ * corpus is memoised in memory, which makes the render a few milliseconds of array lookups, and
+ * every other page stays a build-time artefact. `DayRollover` covers the reader who leaves the
+ * tab open overnight.
+ */
+export const dynamic = 'force-dynamic';
+
 export default function HomePage() {
   const kids = getKidsStats();
-  const today = todayIso();
+  const now = new Date();
+  const timeZone = siteTimeZone();
+  // The day the site is on, in the zone the edition is published in — not UTC, and not whatever
+  // day it happened to be when this deployment was built.
+  const today = todayIso(now, timeZone);
   const todays = getDevotionalForDate(today);
-  const all = getAllDevotionals();
-  const featured = todays ?? all[0];
   const editions = getEditions();
   const stats = getContentStats();
-  const latest = all.slice(0, 6);
-  // Six most recent, minus the featured one, so the grid never repeats the hero.
-  const rest = latest.filter((p) => p.slug !== featured?.slug).slice(0, 6);
+  // Today when the library has it; otherwise the most recent day that has actually arrived.
+  // Never a day from later in the month, which is what a newest-first corpus would offer.
+  const featured = getFeaturedDevotional(now, 'adults', timeZone);
+  const spoken = featured ? devotionalScript(featured) : null;
+  const plan = getReadingPlanFor(today);
+  // Days that have arrived, newest first, minus the hero so the grid never repeats it.
+  const rest = getLatestDevotionals(7)
+    .filter((post) => post.slug !== featured?.slug)
+    .slice(0, 6);
   // Today's article in the other editions, so the front page points a parent at the version a
   // child can actually read instead of leaving them to discover it in the listing.
   const othersToday = AUDIENCE_ORDER.filter((id) => id !== 'adults')
@@ -45,6 +69,8 @@ export default function HomePage() {
 
   return (
     <>
+      {/* Turns this page over at midnight for a reader who left it open. */}
+      <DayRollover date={today} />
       {/* HERO — today's devotional, or the most recent one in the library */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 -z-10">
@@ -64,7 +90,11 @@ export default function HomePage() {
           <div className="max-w-3xl">
             <p className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-secondary/80 border border-border text-sm animate-fade-in">
               <span className="grid place-items-center w-1.5 h-1.5 rounded-full bg-primary animate-pulse" aria-hidden="true" />
-              {todays ? `Today’s devotional · ${formatDayHeading(today)}` : `${stats.posts} daily devotionals published`}
+              {todays
+                ? `Today’s devotional · ${formatDayHeading(today)}`
+                : featured
+                  ? `Most recent · ${formatDayHeading(featured.date)}`
+                  : `${stats.posts} daily devotionals published`}
             </p>
 
             <h1 className="mt-6 font-serif text-5xl md:text-7xl font-semibold tracking-tight text-balance leading-[1.05] animate-fade-in">
@@ -109,10 +139,30 @@ export default function HomePage() {
                   </Link>
                 </Button>
               )}
+              {spoken && (
+                <ListenButton
+                  script={spoken}
+                  size="lg"
+                  variant="outline"
+                  showDuration
+                  label={todays ? 'Listen to today’s devotional' : 'Listen to it'}
+                />
+              )}
               <Button asChild size="lg" variant="outline">
                 <Link href="/devotionals">Browse all devotionals</Link>
               </Button>
             </div>
+
+            {!todays && featured && (
+              <p className="mt-4 text-sm text-muted-foreground">
+                Today&rsquo;s edition ({formatDayHeading(today)}) is not in the library yet, so this is the
+                most recent day published.{' '}
+                <Link href="/today" className="text-primary hover:underline">
+                  Open today&rsquo;s devotional
+                </Link>{' '}
+                any time — it always goes to the current day.
+              </p>
+            )}
 
             {othersToday.length > 0 && (
               <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3 animate-fade-in-slow">
@@ -210,7 +260,7 @@ export default function HomePage() {
 
         {rest.length === 0 ? (
           <p className="text-center text-muted-foreground py-16">
-            No devotionals published yet — add a monthly PDF and run <code>npm run content:extract</code>.
+            The library is empty for now. Every daily devotional appears here as its edition is published.
           </p>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -230,6 +280,45 @@ export default function HomePage() {
           </Button>
         </div>
       </section>
+
+      {/* TODAY'S BIBLE READING PLANS — the portions printed in the same edition as the article */}
+      {plan && (plan.oneYearPlan || plan.twoYearPlan) ? (
+        <section aria-labelledby="plans-heading" className="container pb-24">
+          <div className="rounded-3xl border border-border/70 bg-card p-6 md:p-10">
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <span className="inline-flex items-center gap-2 text-sm uppercase tracking-wider text-primary font-medium">
+                  <Layers className="w-4 h-4" aria-hidden="true" /> Bible reading plans
+                </span>
+                <h2 id="plans-heading" className="mt-2 font-serif text-3xl md:text-4xl font-semibold text-balance">
+                  Read through the Bible alongside today&rsquo;s devotional
+                </h2>
+                <p className="mt-2 text-sm text-muted-foreground max-w-xl">
+                  The portions printed in the {formatDayHeading(today)} edition: the whole Bible in a
+                  year, and again more gently over two.
+                </p>
+              </div>
+              <Button asChild variant="outline" className="shrink-0">
+                <Link href="/reading-plans">Every day&rsquo;s plan</Link>
+              </Button>
+            </div>
+            <dl className="mt-8 grid sm:grid-cols-2 gap-4">
+              {plan.oneYearPlan ? (
+                <div className="rounded-2xl border border-border/70 bg-secondary/40 px-5 py-4">
+                  <dt className="text-xs uppercase tracking-wide text-muted-foreground font-medium">1-Year plan</dt>
+                  <dd className="mt-1.5 font-serif text-lg font-medium leading-snug">{plan.oneYearPlan}</dd>
+                </div>
+              ) : null}
+              {plan.twoYearPlan ? (
+                <div className="rounded-2xl border border-border/70 bg-secondary/40 px-5 py-4">
+                  <dt className="text-xs uppercase tracking-wide text-muted-foreground font-medium">2-Year plan</dt>
+                  <dd className="mt-1.5 font-serif text-lg font-medium leading-snug">{plan.twoYearPlan}</dd>
+                </div>
+              ) : null}
+            </dl>
+          </div>
+        </section>
+      ) : null}
 
       {/* CTA */}
       <section className="container pb-24">
