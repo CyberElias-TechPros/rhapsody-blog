@@ -86,3 +86,81 @@ export function searchDocs(docs: SearchDoc[], query: string, limit = 60): Search
     .sort((a, b) => b.score - a.score || (a.doc.date < b.doc.date ? 1 : -1) || a.doc.title.localeCompare(b.doc.title))
     .slice(0, limit);
 }
+
+/* ------------------------------------------------------------------ books and resources */
+
+/**
+ * The compact shape a resource is searched by.
+ *
+ * A devotional index ships titles, excerpts and opening words because 850 of them still fit in a
+ * page. A book does not: the whole shelf is longer than the daily corpus, and shipping 400 KB of
+ * prose so one query can match inside it is a bad trade on the connection this site is built for.
+ * So resources are matched on their title, subject, blurb, author and opening words — and the
+ * result says as much, rather than pretending a full-text search happened.
+ */
+export interface ResourceSearchDoc {
+  slug: string;
+  title: string;
+  subtitle: string;
+  blurb: string;
+  opening: string;
+  tags: string[];
+  author: string;
+  kindLabel: string;
+  words: number;
+}
+
+export interface ResourceMatch {
+  doc: ResourceSearchDoc;
+  score: number;
+  matchedOn: 'title' | 'subject' | 'blurb' | 'author' | 'opening';
+}
+
+export function scoreResource(
+  doc: ResourceSearchDoc,
+  tokens: string[],
+  phrase: string
+): { score: number; matchedOn: ResourceMatch['matchedOn'] } | null {
+  if (!tokens.length) return null;
+
+  const title = norm(`${doc.title} ${doc.subtitle}`);
+  const blurb = norm(doc.blurb);
+  const opening = norm(doc.opening);
+  const tags = norm(doc.tags.join(' '));
+  const author = norm(`${doc.author} ${doc.kindLabel}`);
+
+  let score = 0;
+  let matchedOn: ResourceMatch['matchedOn'] = 'blurb';
+  const add = (points: number, field: ResourceMatch['matchedOn']) => {
+    score += points;
+    const rank = { title: 6, subject: 5, author: 4, blurb: 3, opening: 2 } as const;
+    if (rank[field] > rank[matchedOn] || score === points) matchedOn = field;
+  };
+
+  for (const token of tokens) {
+    if (title.includes(token)) add(title.startsWith(token) ? 16 : 12, 'title');
+    if (tags.includes(token)) add(9, 'subject');
+    if (author.includes(token)) add(6, 'author');
+    if (blurb.includes(token)) add(4, 'blurb');
+    if (opening.includes(token)) add(2, 'opening');
+  }
+
+  if (!score) return null;
+  if (phrase && phrase.length > 3) {
+    if (title.includes(phrase)) score += 14;
+    if (blurb.includes(phrase)) score += 5;
+  }
+  return { score, matchedOn };
+}
+
+/** Rank the shelf for a query; ties break on length (a book that matches a title is a big deal). */
+export function searchResourceDocs(docs: ResourceSearchDoc[], query: string, limit = 12): ResourceMatch[] {
+  const tokens = tokenize(query);
+  if (!tokens.length) return [];
+  const phrase = norm(query).replace(/\s+/g, ' ');
+  return docs
+    .map((doc) => ({ doc, ...(scoreResource(doc, tokens, phrase) ?? { score: 0, matchedOn: 'blurb' as const }) }))
+    .filter((match) => match.score > 0)
+    .sort((a, b) => b.score - a.score || b.doc.words - a.doc.words || a.doc.title.localeCompare(b.doc.title))
+    .slice(0, limit);
+}

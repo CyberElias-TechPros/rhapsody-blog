@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Rhapsody of Realities \u2014 every daily devotional, published as a static Next.js blog. Cloudflare Worker API in /worker.",
+  "description": "Rhapsody of Realities — every daily devotional, published as a static Next.js blog. Cloudflare Worker API in /worker.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -18,7 +18,9 @@
     "worker:deploy": "npm --prefix worker run deploy",
     "content:kids": "node scripts/extract-kids.mjs",
     "content:kids:verify": "node scripts/extract-kids.mjs --verify",
-    "content:kids:report": "node scripts/extract-kids.mjs --report"
+    "content:kids:report": "node scripts/extract-kids.mjs --report",
+    "resources:extract": "node scripts/extract-resources.mjs",
+    "resources:verify": "node scripts/extract-resources.mjs --verify"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.14",
