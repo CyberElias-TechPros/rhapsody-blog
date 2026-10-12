@@ -56,18 +56,22 @@ The previous Vite + React 18 SPA ("Meaning", which mirrored Telegram channels) i
 | Path | What it is |
 | --- | --- |
 | `app/` | Next.js App Router: layouts, `sitemap.ts`, `robots.ts`, `feed.xml/route.ts`, and the sign-in/account/admin routes |
-| `app/(public)/` | Route group for the reading side of the site (home, library, editions, search, about) — and the only place the AdSense loader is rendered |
-| `components/` | UI: `layout/`, `common/`, `ui/` (shadcn-style primitives), `devotional/`, `search/`, `screens/` |
-| `lib/` | `content.ts` (Markdown → typed data), `search.ts`, `rss.ts`, `format.ts`, `site.ts`, `api.ts` (Worker client), `types.ts` |
+| `app/(public)/` | Route group for the reading side of the site (home, devotionals, editions, kids, resources, reading plans, library, search, about) — and the only place the AdSense loader is rendered |
+| `components/` | UI: `layout/`, `common/`, `ui/` (shadcn-style primitives), `devotional/`, `kids/`, `resources/`, `library/`, `audio/`, `search/`, `home/`, `screens/` |
+| `lib/` | `content.ts` (Markdown → typed data), `resources.ts` (books and studies), `kids.ts`, `time.ts` (the site's clock), `tts.ts` (speech scripts), `tts-providers.ts`, `env.ts`, `search.ts`, `rss.ts`, `format.ts`, `site.ts`, `api.ts` (Worker client), `types.ts` |
 | `auth/` | `AuthProvider` (Worker JWT session) and `RequireRole` (client-side gate) |
 | `hooks/` | `useSavedPosts` — localStorage "my library", synced across tabs |
+| `docs/ROADMAP.md` | The gap audit behind the current state: what was missing, what carries each fix, what a key unlocks, what is left |
 | `lib/ads.ts`, `lib/security-headers.ts` | AdSense config (publisher id, slot ids, gating) and the response headers/CSP |
 | `content/devotionals/` | **The published posts.** 853 Markdown files — 28 monthly editions across three audiences |
 | `content/kids/` | The kids' edition: one Markdown file per monthly issue, with a page list in its front matter |
+| `content/resources/` | Everything in `pdf/` that is *not* a daily edition: books, fasting programmes, service and specials notes — ten documents, ~93,000 words |
+| `scripts/extract-resources.mjs` | PDF → Markdown for those documents: text layer where there is one, OCR where there is not, with a `--verify` self-check |
 | `public/kids/` | The rendered pages of those issues (30–60 KB each, 12 MB in total), committed so the magazine can be read in a browser |
-| `scripts/extract-devotionals.mjs` | PDF → Markdown extractor, with a `--verify` self-check |
-| `tests/` | Vitest: extractor units, PDF↔Markdown coverage, content layer, search, format, RSS |
-| `worker/` | Cloudflare Worker API (routes, D1 repos, Telegram sync, own test suite) — unchanged |
+| `scripts/extract-devotionals.mjs` | PDF → Markdown extractor for the daily editions, with a `--verify` self-check |
+| `tests/` | Vitest: extractor units, PDF↔Markdown coverage, content layer, resources, time, speech, the saved-shelf API, search, format, RSS, ads |
+| `.github/workflows/ci.yml` | Typecheck, lint, tests and a production build for the site; typecheck and tests for the Worker |
+| `worker/` | Cloudflare Worker API (routes, D1 repos, Telegram sync, the daily digest email, own test suite) |
 | `legacy/` | The previous Vite SPA, kept for reference |
 | `september-2026-rhapsody.pdf`, `october-2026-rhapsody.pdf` | The two source editions already published as posts |
 | `pdf/` | The rest of the source editions: adults March–August, Teens (Teevo) and Early Readers (RORER), plus the Kids issues and non-devotional titles the extractor skips on purpose |
@@ -78,25 +82,56 @@ The previous Vite + React 18 SPA ("Meaning", which mirrored Telegram channels) i
 
 | Route | Renders |
 | --- | --- |
-| `/` | Today's devotional as the hero (falls back to the newest day), edition strip, latest grid |
+| `/` | **Today's** devotional as the hero, resolved per request in the site's own timezone (falls back to the newest released day), edition strip, latest grid, reading plans, newsletter |
 | `/devotionals` | The library: JS-free filtering by audience, edition, tag and text, with sort links and pagination |
 | `/devotionals/YYYY-MM-DD-slug` | One article — dated permalink, e.g. `/devotionals/2026-10-10-the-genius-of-christianity` |
 | `/kids` | The kids' magazine, one card per issue — cover, page count, what OCR had to say |
 | `/kids/2026-04-kids` | One issue, page by page: the printed page, then the words recovered from it (`#page-12` links straight to a page) |
 | `/editions` | Every monthly edition, grouped by audience, with counts and date ranges |
 | `/editions/2026-10`, `/editions/2026-10-teens` | One edition, day 1 first — a readers' edition carries its audience in the slug |
-| `/search` | Client-side search over a compact index (no round-trip); `?q=` is the source of truth |
+| `/today` | A server redirect to the current day's article — the URL a home-screen shortcut, a QR code or a shared "read today's" link should use |
+| `/reading-plans` | The day's 1-Year and 2-Year Bible reading plans across the editions, the week ahead, and `?date=` / `?audience=` for any other day |
+| `/resources` | The shelf that is not a daily devotional: books, studies, sermon notes and programme notes, grouped by what they are |
+| `/resources/the-power-of-your-mind` | One book or study — sticky table of contents, Listen, Save, Share, structured data, and a caveat with its OCR confidence where the words were recognised from a scan |
+| `/library` | The reader's saved shelf, resolved from the slugs on their device (`noindex`, no account, works offline) |
+| `/search` | Client-side search over a compact index (no round-trip), devotionals and books alike; `?q=` is the source of truth |
 | `/about` | Why the site exists — getting the daily word to everyone — plus attribution and provenance |
 | `/feed.xml` | RSS 2.0 carrying each day's **complete** article — the adult edition, which is what the channel is named after |
-| `/sitemap.xml`, `/robots.txt`, `/ads.txt` | Generated from the corpus; `ads.txt` authorises Google AdSense |
+| `/sitemap.xml`, `/robots.txt`, `/ads.txt`, `/manifest.webmanifest` | Generated from the corpus; `ads.txt` authorises Google AdSense; the manifest installs the site with `/today` as its start URL |
+| `/api/today` | The day's devotional as JSON (site timezone, `?audience=`, `?full=1` for the whole article) — what the Worker's daily email reads |
+| `/api/library` | `?slugs=a,b,c` → card-sized items for the saved shelf; a lookup, never a store |
+| `/api/tts` | One spoken section as audio, when a studio voice key is configured; otherwise it says so and the player stays on the browser voice |
 | `/login`, `/register` | Worker-backed auth screens |
-| `/account` | Saved devotionals (local, no account needed) + Worker profile, password and sessions |
+| `/account` | Worker profile, password and sessions — the saved shelf lives at `/library`, which needs no account |
 | `/admin` | Worker console: channel sync, post moderation, subscribers, users, audit log |
 
 An article page contains, in order: the headline and day, the opening scripture, the message with a
 drop cap, the closing prayer or confession, further study, the 1-Year and 2-Year Bible reading plans,
 tags, share/save actions, the source attribution (edition, PDF and page numbers), previous/next day
-navigation, and more from the same edition.
+navigation, and more from the same edition. A **Listen** control sits under the headline and in the
+share row, and the player that opens survives navigation to any other page.
+
+---
+
+## Reading it: today, aloud, saved, planned
+
+Four things a daily devotional has to get right that a normal blog does not:
+
+- **Today has to mean today.** The date is resolved per request in `NEXT_PUBLIC_SITE_TIMEZONE`
+  (Lagos by default) by `lib/time.ts`, never at build time and never in UTC — 23:30Z on the 10th is
+  already the 11th for the readers this edition is written for. `/today` redirects, `/api/today`
+  answers in JSON, the home page is `force-dynamic`, and `components/home/DayRollover.tsx` re-reads
+  the day at the reader's own midnight when their zone is not the site's.
+- **It has to be listenable.** `lib/tts.ts` turns an article (or a book) into a speech script —
+  title, opening scripture, one part per paragraph, prayer, further study, both reading plans,
+  outro — cleans Markdown into prose, and cuts it into chunks a browser will actually finish.
+  `components/audio/` is the player: rate, voice, resume where you stopped, and a studio-voice
+  upgrade through `POST /api/tts` when a key exists. **No key is required for any of it.**
+- **Saving has to need no account.** `hooks/useSavedPosts.ts` keeps slugs in localStorage and
+  `/library` renders them, asking `GET /api/library` for exactly those slugs rather than shipping
+  the corpus to the browser.
+- **The reading plans have to be findable.** They are printed at the foot of every article and
+  collected on `/reading-plans`, which answers for any day (`?date=`) and any audience.
 
 ---
 
@@ -129,6 +164,34 @@ printed text alone is ambiguous:
 
 Each post's frontmatter keeps its provenance: the headline exactly as printed (`titleOriginal`), the
 source PDF and the page numbers it came from, the printed weekday, and the closing label.
+
+### Books, studies and programme notes
+
+Everything else in `pdf/` — books, fasting programmes, service and specials notes — is extracted by
+a second script, because those documents are not two-page spreads with a fixed geometry:
+
+```bash
+npm run resources:extract                   # every registry entry → content/resources/*.md
+npm run resources:verify                    # same parse, assert every invariant, write nothing
+npm run resources:extract -- --only prophecy --no-ocr    # one document, no OCR pass
+```
+
+`scripts/extract-resources.mjs` keeps a registry of the ten documents with the metadata a PDF
+cannot be trusted to carry (title, kind, author, date, tags, blurb), then recovers the words:
+
+- from the **text layer** where the PDF has one, joining items by the gap between them rather than
+  always inserting a space, because a justified PDF splits words across items and a naive join
+  produces "he alth";
+- by **OCR** where it does not (three scanned books, 82–88 % confidence), rendering each page at
+  200 dpi and reading it with tesseract;
+- and drops the furniture by rule rather than by hand: repeated lines (a running head or a
+  transcriber's credit), pages that are mostly rights text, addresses or contents lists, cover
+  pages of display-type fragments, and the OCR mistake worth repairing — a capital "I" read as a
+  pipe. What survives is checked by `--verify` and by `tests/resources.test.ts`.
+
+Each file's frontmatter keeps its provenance the same way the devotionals do: the source PDF, the
+page count, the word count, how the words were recovered and, for a scan, the OCR confidence the
+page prints next to its caveat.
 
 ### The kids' edition
 
@@ -301,10 +364,20 @@ NEXT_PUBLIC_ADS_ENABLED=true NEXT_PUBLIC_ADSENSE_SLOT_FEED=1234567890 npm run de
 ## Tests
 
 ```bash
-npm test          # 116 tests
+npm test          # 257 tests
 npm run typecheck
 npm run lint
+npm run build     # prerenders all 853 devotionals, 10 resources and 9 kids' issues
 ```
+
+The Worker has its own suite, in its own toolchain:
+
+```bash
+cd worker && npm ci && cp .dev.vars.example .dev.vars && npm test   # 86 tests, cloudflare vitest pool
+```
+
+`.dev.vars` is required because the test pool builds a real Worker from `wrangler.jsonc`, which
+needs the secrets to exist; the example file is the local-development contract, and CI copies it.
 
 | File | What it guarantees |
 | --- | --- |
@@ -316,6 +389,10 @@ npm run lint
 | `tests/format.test.ts` | Date and count formatting — never an "Invalid Date" in a page |
 | `tests/rss.test.ts` | A complete article per item, XML escaping, well-formed feed |
 | `tests/ads.test.tsx` | AdSense config and gating, the CSP's ad origins, `ads.txt`, the rendered `ins.adsbygoogle` unit, and the placement policy |
+| `tests/time.test.ts` | The site's clock: one instant read as two days in two zones, offsets including DST, local midnight, impossible calendar dates rejected |
+| `tests/tts.test.ts` | Speech scripts for a real devotional and a real book, Markdown → prose, chunking under the browser's ceiling, durations, voice picking |
+| `tests/resources.test.ts` | The shelf: every document loaded, slugs matching filenames, no furniture in the body, unique table-of-contents anchors, grouping, stats, search |
+| `tests/library.test.ts` | `GET /api/library`: all three corpora resolved, order preserved, unknown slugs reported, the 200-slug limit, and a card-sized answer |
 
 The coverage check is the one that matters: it re-reads the September and October adult PDFs, rebuilding every visual line of
 every spread, and asserts that each line of real content appears in the extracted fields — allowing
@@ -363,11 +440,22 @@ turns into a signed-out state everywhere.
 ## Deployment
 
 **Frontend** — Vercel (or any Node host): `npm run build && npm start`. Set `NEXT_PUBLIC_SITE_URL`
-and `NEXT_PUBLIC_API_URL`. The build prerenders the whole corpus; `dynamicParams = false` on the
-article and edition routes means an unknown slug is a clean 404 rather than a server render.
+and `NEXT_PUBLIC_API_URL`; `.env.example` documents every optional key and what each one unlocks
+(`docs/ROADMAP.md` has the same table with the reasoning). The build prerenders the whole corpus;
+`dynamicParams = false` on the article and edition routes means an unknown slug is a clean 404
+rather than a server render. The home page, `/today`, `/api/today` and `/reading-plans` are
+deliberately *not* prerendered — they answer for the current day.
 
-**Worker** — `npm run worker:deploy` (wrangler). D1 migrations, KV, R2 and the cron trigger are
-configured inside `/worker` exactly as before.
+**Worker** — `npm run worker:deploy` (wrangler). D1 migrations (`0001_init.sql`,
+`0002_digest_runs.sql`), KV, R2 and two cron triggers are configured inside `/worker`:
+
+- `*/15 * * * *` — Telegram sync, failure-isolated per channel;
+- `0 4 * * *` — the daily digest email (05:00 in Lagos). It reads `GET {SITE_URL}/api/today?full=1`
+  and sends through the Resend-shaped API named by `EMAIL_API_URL` / `EMAIL_API_KEY` / `EMAIL_FROM`
+  (`wrangler secret put EMAIL_API_KEY`). With those unset, or with `SITE_URL` unset, it logs and
+  sends nothing rather than guessing — and the subscriber list keeps growing in D1 either way, so
+  switching email on later is a secret, not a migration. `ALLOWED_ORIGINS` must contain the
+  deployed frontend origin or every browser call to the API is CORS-blocked.
 
 Two things worth knowing:
 

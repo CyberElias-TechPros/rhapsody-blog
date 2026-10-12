@@ -1,0 +1,119 @@
+name: CI
+
+# What this guards: a daily devotional site whose whole value is that the article for *today* is
+# correct and readable. So every push checks the four things that can silently break that —
+# types, lint, the assertions about the corpus and the reader-facing helpers, and a real
+# production build (which prerenders all 853 articles plus every book and kids' issue).
+#
+# The Worker API is a separate deployable with its own toolchain and its own test pool, so it gets
+# its own job: a green site with a broken API is a broken account screen.
+#
+# Re-verifying the corpus against the PDFs it was extracted from is *not* on every push: it reads
+# 48 PDFs, and three of them need OCR, which is minutes of work for a check that only changes when
+# the extractor changes. It is one click away under Actions → CI → Run workflow.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      verify_content:
+        description: 'Also re-verify the corpus against the PDFs (slow — reads every PDF)'
+        type: boolean
+        default: false
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  site:
+    name: Site — typecheck, lint, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci --no-audit --no-fund
+
+      - name: Types
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Tests
+        run: npm test
+
+      # The build is the real content test: it runs generateStaticParams over every devotional,
+      # book and kids' issue, so a slug that does not resolve fails here rather than in production.
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SITE_URL: https://rhapsody-blog.vercel.app
+          NEXT_PUBLIC_SITE_TIMEZONE: Africa/Lagos
+
+  worker:
+    name: Worker API — typecheck, test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: worker
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: worker/package-lock.json
+
+      - name: Install
+        run: npm ci --no-audit --no-fund
+
+      - name: Types
+        run: npm run typecheck
+
+      # The vitest pool builds a Worker from wrangler.jsonc and needs the secrets to exist; the
+      # example file is the local-development contract, and CI has no real keys to give it.
+      - name: Local secrets for the test pool
+        run: cp .dev.vars.example .dev.vars
+
+      - name: Tests
+        run: npm test
+
+  content:
+    name: Corpus ↔ PDF verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    if: github.event_name == 'workflow_dispatch' && inputs.verify_content
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci --no-audit --no-fund
+
+      # Each of these re-reads the source PDFs and reports any article whose text no longer matches
+      # what was committed. `--no-ocr` on the resources skips the three scanned books, whose OCR
+      # pass is minutes each and whose output is already committed.
+      - name: Daily devotionals
+        run: npm run content:verify
+
+      - name: Kids' issues
+        run: npm run content:kids:verify
+
+      - name: Books and resources (text layer)
+        run: npm run resources:verify -- --no-ocr
