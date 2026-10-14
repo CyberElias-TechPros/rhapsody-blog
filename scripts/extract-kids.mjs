@@ -373,8 +373,13 @@ export async function* renderPages(bytes, { scale = 2.8 }) {
 /**
  * pdf.js for the text layer, taken from the same copy pdf-to-img renders with. Resolving through
  * pdf-to-img keeps one version loaded; if npm ever hoists it to the root, the fallback is the root.
+ *
+ * Exported because `extract-resources.mjs` reads text layers *and* renders pages for OCR in one
+ * process: importing the root pdfjs-dist there as well makes the two versions disagree about the
+ * worker ("The API version 6.4.299 does not match the Worker version 4.10.38") and every render
+ * fails. One loader, one version.
  */
-async function loadPdfjs() {
+export async function loadPdfjs() {
   const require = createRequire(path.join(REPO_ROOT, 'node_modules/pdf-to-img/package.json'));
   let dir = null;
   try {

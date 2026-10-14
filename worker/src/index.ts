@@ -10,6 +10,7 @@
  *   RATE_LIMITS(KV) — soft abuse counters (no-op when unbound)
  *   MEDIA (R2)      — mirrored Telegram cover images (optional; falls back to source URLs)
  *   Cron            — "every 15 min" Telegram sync (failure-isolated per channel)
+ *                     "0 4 * * *" daily digest email (see services/digest.ts)
  */
 
 import type { Env } from './types';
@@ -30,6 +31,7 @@ import { registerAdminRoutes } from './routes/admin';
 import { registerMiscRoutes } from './routes/misc';
 import { scheduleBootstrap } from './services/bootstrap';
 import { syncAllChannels } from './services/telegram/sync';
+import { DIGEST_CRON, sendDailyDigest } from './services/digest';
 
 const router = new Router();
 registerMiscRoutes(router);
@@ -108,6 +110,14 @@ export default {
 
   /** Cron trigger: scheduled Telegram sync. Errors are per-channel isolated inside syncAll. */
   async scheduled(event: ScheduledEvent, env: Env, execution: ExecutionContext): Promise<void> {
+    // Two crons, two jobs, told apart by the expression Cloudflare passes in.
+    if (event.cron === DIGEST_CRON) {
+      logInfo('cron: daily digest starting', { cron: event.cron });
+      const summary = await sendDailyDigest(env);
+      logInfo('cron: daily digest complete', summary as Record<string, unknown>);
+      return;
+    }
+
     logInfo('cron: telegram sync starting', { cron: event.cron });
     const results = await syncAllChannels(env, execution.waitUntil.bind(execution));
     const created = results.reduce((n, r) => n + r.created, 0);

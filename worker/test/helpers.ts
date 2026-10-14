@@ -1,6 +1,10 @@
 import { beforeAll } from "vitest";
 import { env, SELF } from "cloudflare:test";
 import migration0001 from "../migrations/0001_init.sql?raw";
+import migration0002 from "../migrations/0002_digest_runs.sql?raw";
+
+/** Every migration, in the order `wrangler d1 migrations apply` would run them. */
+const MIGRATIONS = [migration0001, migration0002];
 
 /**
  * Local miniflare's D1.exec() splits statements line-wise (breaks on multi-line DDL), so we
@@ -30,9 +34,11 @@ function splitStatements(sql: string): string[] {
 let schemaPromise: Promise<void> | null = null;
 export function ensureSchema(): Promise<void> {
   schemaPromise ??= (async () => {
-    const statements = splitStatements(migration0001);
-    for (let i = 0; i < statements.length; i += 50) {
-      await env.DB.batch(statements.slice(i, i + 50).map((s) => env.DB.prepare(s)));
+    for (const migration of MIGRATIONS) {
+      const statements = splitStatements(migration);
+      for (let i = 0; i < statements.length; i += 50) {
+        await env.DB.batch(statements.slice(i, i + 50).map((s) => env.DB.prepare(s)));
+      }
     }
   })();
   return schemaPromise;

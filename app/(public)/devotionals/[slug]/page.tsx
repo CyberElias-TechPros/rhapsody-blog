@@ -1,13 +1,14 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { ArrowLeft, BookMarked, CalendarDays, Clock, FileText, Hash } from 'lucide-react';
+import { ArrowLeft, BookMarked, CalendarDays, Clock, FileText, Hash, Headphones } from 'lucide-react';
 import { Markdown } from '@/components/Markdown';
 import { DevotionalCard } from '@/components/DevotionalCard';
 import { AdSlot } from '@/components/common/AdSlot';
 import { DayNav } from '@/components/devotional/DayNav';
 import { SaveButton } from '@/components/devotional/SaveButton';
 import { ShareRow } from '@/components/devotional/ShareRow';
+import { ListenButton } from '@/components/audio/ListenButton';
 import {
   ClosingCard,
   ExtraSectionCard,
@@ -26,6 +27,7 @@ import {
 } from '@/lib/content';
 import { AUDIENCES } from '@/lib/audiences';
 import { formatDate, formatDayHeading } from '@/lib/format';
+import { devotionalScript } from '@/lib/tts';
 import { SITE, absoluteUrl } from '@/lib/site';
 import type { Devotional } from '@/lib/types';
 
@@ -108,6 +110,9 @@ export default async function DevotionalPage({ params }: Props) {
     .filter((p) => p.slug !== post.slug)
     .slice(0, 3);
   const corpusSize = getAllDevotionals().length;
+  // Built on the server so the first tap can start speaking immediately — no fetch, no waiting
+  // for a client bundle to work out what the article says.
+  const spoken = devotionalScript(post);
 
   return (
     <article className="pb-24">
@@ -162,8 +167,21 @@ export default async function DevotionalPage({ params }: Props) {
             <span className="flex items-center gap-1.5">
               <BookMarked className="w-3.5 h-3.5" aria-hidden="true" /> {post.scriptureReference || 'Opening scripture'}
             </span>
+            <span className="flex items-center gap-1.5">
+              <Headphones className="w-3.5 h-3.5" aria-hidden="true" /> {spoken.minutes} min listen
+            </span>
           </div>
         </header>
+
+        {/* Read aloud: the whole day in the order the page prints it — title, opening scripture,
+            the message a paragraph at a time, the prayer, further study and the reading plans.
+            Playback lives in the root layout, so it carries on while the reader browses. */}
+        <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-border/70 bg-card px-5 py-4">
+          <ListenButton script={spoken} showDuration />
+          <p className="text-xs text-muted-foreground max-w-xs">
+            Step straight to the prayer, change the speed, or keep listening on another page.
+          </p>
+        </div>
 
         <ScriptureCard text={post.scripture} reference={post.scriptureReference} />
 

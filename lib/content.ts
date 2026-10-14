@@ -22,6 +22,7 @@ import {
   monthOfEdition,
   type AudienceId,
 } from './audiences';
+import { addDaysIso, siteTimeZone, todayIso } from './time';
 import type {
   AudienceGroup,
   Devotional,
@@ -33,6 +34,12 @@ import type {
   Paged,
   SearchDoc,
 } from './types';
+
+/**
+ * The day itself lives in `lib/time.ts` (timezone-aware, and usable from client components);
+ * it is re-exported here so the routes and the tests keep asking the content layer for dates.
+ */
+export { addDaysIso, dateIsoIn, msUntilNextMidnight, siteTimeZone, todayIso } from './time';
 
 const CONTENT_DIR = path.join(process.cwd(), 'content', 'devotionals');
 
@@ -291,19 +298,108 @@ export function getDaySiblings(slug: string): Devotional[] {
     .filter((sibling): sibling is Devotional => Boolean(sibling));
 }
 
-export function todayIso(now = new Date()): string {
-  return now.toISOString().slice(0, 10);
+export function getTodaysDevotional(
+  now: Date = new Date(),
+  audience: AudienceId = DEFAULT_AUDIENCE,
+  timeZone = siteTimeZone()
+): Devotional | undefined {
+  return getDevotionalForDate(todayIso(now, timeZone), audience);
+}
+
+/**
+ * Has this day arrived? A monthly edition is extracted whole, so on the 12th the corpus already
+ * holds the 31st — and a library sorted newest-first would put a day nobody has lived through
+ * yet above today's reading. "Released" is what the home page, `/today` and the daily email use
+ * to decide what a reader should be shown *now*; unreleased days stay reachable by their link
+ * and on their edition page, because they are printed in the booklet the reader may be holding.
+ */
+export function isReleased(post: Devotional, today: string = todayIso()): boolean {
+  return post.date <= today;
+}
+
+/** One audience's days up to and including `today`, newest first. */
+export function getReleasedDevotionals(
+  audience: AudienceId = DEFAULT_AUDIENCE,
+  today: string = todayIso()
+): Devotional[] {
+  return getDevotionalsByAudience(audience).filter((post) => isReleased(post, today));
+}
+
+/** The `limit` most recent released days for an audience — the home page's "Latest" grid. */
+export function getLatestDevotionals(
+  limit = 6,
+  audience: AudienceId = DEFAULT_AUDIENCE,
+  today: string = todayIso()
+): Devotional[] {
+  return getReleasedDevotionals(audience, today).slice(0, Math.max(0, limit));
 }
 
 /**
  * Home-page hero pick: today's article when we have it, otherwise the most recent one before
  * today, otherwise the newest overall. Always returns something while the corpus is non-empty.
+ *
+ * `now` and `timeZone` are injected so the choice is deterministic in tests and correct for the
+ * zone the edition is published in — a UTC date would show yesterday's article every evening.
  */
-export function getFeaturedDevotional(now = new Date(), audience: AudienceId = DEFAULT_AUDIENCE): Devotional | undefined {
+export function getFeaturedDevotional(
+  now: Date = new Date(),
+  audience: AudienceId = DEFAULT_AUDIENCE,
+  timeZone = siteTimeZone()
+): Devotional | undefined {
   const all = getDevotionalsByAudience(audience);
   if (!all.length) return undefined;
-  const today = todayIso(now);
-  return getDevotionalForDate(today, audience) ?? all.find((p) => p.date <= today) ?? all[0];
+  const today = todayIso(now, timeZone);
+  return getDevotionalForDate(today, audience) ?? all.find((post) => post.date <= today) ?? all[0];
+}
+
+/** The day's Bible reading plans — what `/reading-plans` and the daily email render. */
+export interface ReadingPlanDay {
+  date: string;
+  weekday: string;
+  title: string;
+  slug: string;
+  audience: AudienceId;
+  oneYearPlan: string;
+  twoYearPlan: string;
+  furtherStudy: string;
+}
+
+function toReadingPlanDay(post: Devotional): ReadingPlanDay {
+  return {
+    date: post.date,
+    weekday: post.weekday,
+    title: post.title,
+    slug: post.slug,
+    audience: post.audience,
+    oneYearPlan: post.oneYearPlan,
+    twoYearPlan: post.twoYearPlan,
+    furtherStudy: post.furtherStudy,
+  };
+}
+
+/** One day's plans, when that audience published the day. */
+export function getReadingPlanFor(
+  dateIso: string,
+  audience: AudienceId = DEFAULT_AUDIENCE
+): ReadingPlanDay | undefined {
+  const post = getDevotionalForDate(dateIso, audience);
+  return post ? toReadingPlanDay(post) : undefined;
+}
+
+/**
+ * A run of days' plans ending at `today` (or at `endDate`), oldest first — the reading-plan
+ * page shows the week around today rather than the whole corpus.
+ */
+export function getReadingPlans(
+  endDateIso: string,
+  days = 7,
+  audience: AudienceId = DEFAULT_AUDIENCE
+): ReadingPlanDay[] {
+  const span = Math.max(1, Math.min(60, days));
+  const dates = Array.from({ length: span }, (_, i) => addDaysIso(endDateIso, i - (span - 1)));
+  return dates
+    .map((date) => getReadingPlanFor(date, audience))
+    .filter((plan): plan is ReadingPlanDay => Boolean(plan && (plan.oneYearPlan || plan.twoYearPlan)));
 }
 
 function matchesQuery(post: Devotional, query: DevotionalQuery): boolean {

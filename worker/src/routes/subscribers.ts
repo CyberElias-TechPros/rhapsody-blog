@@ -34,12 +34,19 @@ export function makeUnsubscribeToken(secret: string, email: string, exp: number)
 }
 
 function verifyUnsubscribeToken(secret: string, email: string, token: string): boolean {
-  const expected = makeUnsubscribeToken(secret, email, Date.now());
-  try {
-    return timingSafeEqual(Buffer.from(expected), Buffer.from(token));
-  } catch {
-    return false;
-  }
+  // The token is derived from a ~30-day time bucket, so a link emailed late in one bucket would
+  // fail the moment the bucket rolled over. Accept the previous bucket too: the TTL still expires,
+  // but an unsubscribe never fails for a reason the reader cannot act on.
+  const now = Date.now();
+  return [makeUnsubscribeToken(secret, email, now), makeUnsubscribeToken(secret, email, now - UNSUB_TTL_SEC * 1000)].some(
+    (candidate) => {
+      try {
+        return timingSafeEqual(Buffer.from(candidate), Buffer.from(token));
+      } catch {
+        return false;
+      }
+    }
+  );
 }
 
 const emailSchema = emailInput;

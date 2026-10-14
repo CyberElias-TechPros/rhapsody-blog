@@ -81,6 +81,66 @@ export interface Devotional {
 /** A card-sized view of a devotional — enough for lists, without loading the body. */
 export type DevotionalSummary = Omit<Devotional, 'body' | 'message'>;
 
+/* ------------------------------------------------------------------ resources (books, notes) */
+
+/**
+ * What a resource is. The daily devotionals are a stream; these are documents — a book, a short
+ * study, the transcript of one service, or the day-by-day notes of a prayer programme.
+ */
+export type ResourceKind = 'book' | 'study' | 'sermon-notes' | 'programme';
+
+/** A headed block of a resource — one chapter, day or section, as the table of contents lists it. */
+export interface ResourceSection {
+  /** Anchor id, so `/resources/<slug>#day-3` lands on the day. */
+  id: string;
+  /** `''` for the opening text of a document that starts before its first heading. */
+  heading: string;
+  paragraphs: string[];
+}
+
+export interface Resource {
+  /** Permalink slug: `the-power-of-your-mind`. No date prefix — these are not days. */
+  slug: string;
+  title: string;
+  subtitle?: string;
+  kind: ResourceKind;
+  kindLabel: string;
+  author: string;
+  publisher: string;
+  /** `yyyy-mm-dd` when the document states one (a service, a programme's first day); else `''`. */
+  date: string;
+  /** "New Year's Eve Service, 31 December 2025" — the date as the document puts it. */
+  dateNote: string;
+  /** Printed publication year, when there is one (a copyright page). */
+  year?: number;
+  isbn: string;
+  excerpt: string;
+  /** The reader-facing one-liner for a card; the excerpt is the document's own opening. */
+  blurb: string;
+  tags: string[];
+  /** "Transcribed by … · Compiled by …" — a credit the notes carry and the site keeps. */
+  credit: string;
+  sourcePdf: string;
+  sourcePages: number;
+  words: number;
+  readingMinutes: number;
+  /** Minutes at the narration rate — the "Listen" control shows this. */
+  listeningMinutes: number;
+  sections: ResourceSection[];
+  /**
+   * `text-layer` when the words were copied out of the PDF, `ocr` when they were recognised from a
+   * scan. The page says which, because recognised text has not been read back by a human.
+   */
+  recovered: 'text-layer' | 'ocr';
+  /** Mean OCR confidence, when `recovered` is `ocr`. */
+  confidence?: number;
+  status: 'published' | 'draft';
+  body: string;
+}
+
+/** A card-sized view of a resource — no body, no sections, plus how many headings it has. */
+export type ResourceSummary = Omit<Resource, 'body' | 'sections'> & { sectionCount: number };
+
 export interface Edition {
   slug: string;
   title: string;
@@ -126,6 +186,23 @@ export interface Paged<T> {
   limit: number;
   total: number;
   totalPages: number;
+}
+
+/**
+ * One saved item on `/library`, resolved by `GET /api/library`. The reader's device stores slugs
+ * only (see `hooks/useSavedPosts.ts`), so this is the card the server hands back for each one —
+ * whichever of the three corpora it turned out to belong to.
+ */
+export interface LibraryItem {
+  slug: string;
+  kind: 'devotional' | 'resource' | 'kids';
+  title: string;
+  href: string;
+  /** "For Teens", "Books", "For Kids" — the line above the title on the card. */
+  label: string;
+  date: string;
+  excerpt: string;
+  meta: string;
 }
 
 /** The compact payload shipped to the client so `/search` can filter without a server round-trip. */

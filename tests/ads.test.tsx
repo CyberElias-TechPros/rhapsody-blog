@@ -6,6 +6,7 @@ import { cleanup, render } from '@testing-library/react';
 import {
   AD_FRAME_ORIGINS,
   AD_SCRIPT_ORIGINS,
+  ANALYTICS_SCRIPT_ORIGINS,
   contentSecurityPolicy,
   securityHeaders,
 } from '@/lib/security-headers';
@@ -15,7 +16,9 @@ import {
  * locking down:
  *
  * 1. **The CSP** — an ad domain dropped from `script-src` or `frame-src` stops ads serving
- *    silently, with no build error and no test failure anywhere else.
+ *    silently, with no build error and no test failure anywhere else. The same holds for the
+ *    Ad Traffic Quality (Sodar) frame and for Cloudflare's edge-injected Web Analytics beacon,
+ *    where the only symptom is a console violation nobody reads.
  * 2. **The component** — the `ins.adsbygoogle` markup AdSense expects, pushed exactly once per
  *    element (a second push throws), and nothing rendered at all when unconfigured or disabled.
  * 3. **The placement policy** — no unit may sit inside a devotional, and none on the signed-in
@@ -84,6 +87,26 @@ describe('Content-Security-Policy', () => {
   it('lets ad iframes render', () => {
     expect(directives['frame-src']).toBeDefined();
     for (const origin of AD_FRAME_ORIGINS) expect(directives['frame-src'], origin).toContain(origin);
+    expect(directives['frame-src']).toContain('https://pagead2.googlesyndication.com');
+  });
+
+  it('lets the Ad Traffic Quality (Sodar) verification frame load', () => {
+    // Blocked here, `sodar2.js` logs a second postMessage failure about a `null` origin and the
+    // console looks like two unrelated bugs. The hosts must be in `frame-src`, not only in
+    // `script-src` — the scripts run inside the ad iframe, the frame itself is ours to allow.
+    for (const origin of ['https://ep1.adtrafficquality.google', 'https://ep2.adtrafficquality.google']) {
+      expect(directives['frame-src'], origin).toContain(origin);
+      expect(directives['script-src'], origin).toContain(origin);
+    }
+  });
+
+  it('lets the edge-injected Cloudflare Web Analytics beacon execute', () => {
+    // Cloudflare appends this tag to every HTML response when automatic setup is on for the
+    // zone, so it is invisible to the repository and easy to break with a policy edit.
+    for (const origin of ANALYTICS_SCRIPT_ORIGINS) expect(directives['script-src'], origin).toContain(origin);
+    expect(directives['script-src']).toContain('https://static.cloudflareinsights.com');
+    // Its RUM POSTs go to an https endpoint, which the blanket `connect-src` already allows.
+    expect(directives['connect-src']).toContain('https:');
   });
 
   it('still allows the ad beacons and creative images', () => {

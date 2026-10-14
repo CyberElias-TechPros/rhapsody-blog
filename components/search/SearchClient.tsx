@@ -3,19 +3,27 @@
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useMemo, useState, type FormEvent, type ReactNode } from 'react';
-import { CalendarDays, Search, SearchX } from 'lucide-react';
+import { BookOpen, CalendarDays, Search, SearchX } from 'lucide-react';
 import { AdSlot } from '@/components/common/AdSlot';
 import { AudienceBadge } from '@/components/common/AudienceBadge';
 import { Button } from '@/components/ui/button';
 import { AUDIENCES, AUDIENCE_ORDER, audienceOrNull, type AudienceId } from '@/lib/audiences';
 import { formatDateShort } from '@/lib/format';
-import { searchDocs } from '@/lib/search';
+import { searchDocs, searchResourceDocs, type ResourceSearchDoc } from '@/lib/search';
 import { cn } from '@/lib/utils';
 import type { SearchDoc } from '@/lib/types';
 
 const SUGGESTIONS = ['righteousness', 'Holy Spirit', 'Romans', 'prayer', 'born again', 'covenant'];
 
-function SearchInner({ docs, initialQuery }: { docs: SearchDoc[]; initialQuery: string }) {
+function SearchInner({
+  docs,
+  resources = [],
+  initialQuery,
+}: {
+  docs: SearchDoc[];
+  resources?: ResourceSearchDoc[];
+  initialQuery: string;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -53,6 +61,10 @@ function SearchInner({ docs, initialQuery }: { docs: SearchDoc[]; initialQuery: 
     }
     return tally;
   }, [docs, matches, searching]);
+  // The shelf is searched alongside the days: a query for "marriage" or "prophecy" is often a
+  // book the reader is looking for, not a devotional.
+  const resourceMatches = useMemo(() => searchResourceDocs(resources, value.trim()), [resources, value]);
+
   const countFor = (id: AudienceId | 'all') =>
     id === 'all' ? (searching ? matches.length : docs.length) : counts[id] ?? 0;
 
@@ -149,7 +161,14 @@ function SearchInner({ docs, initialQuery }: { docs: SearchDoc[]; initialQuery: 
             </div>
             <p className="font-serif text-xl font-semibold">No devotionals match “{value.trim()}”</p>
             <p className="text-sm text-muted-foreground max-w-md">
-              Try one word instead of a phrase, a book of the Bible, or{' '}
+              {resourceMatches.length > 0 ? (
+                <>
+                  {resourceMatches.length === 1 ? 'A book or resource below does' : 'The books and resources below do'}{' '}
+                  — and you can try one word instead of a phrase, or{' '}
+                </>
+              ) : (
+                <>Try one word instead of a phrase, a book of the Bible, or </>
+              )}
               <Link href="/devotionals" className="text-primary hover:underline">
                 browse the whole library
               </Link>
@@ -201,6 +220,46 @@ function SearchInner({ docs, initialQuery }: { docs: SearchDoc[]; initialQuery: 
           </>
         )}
       </div>
+
+      {searching && resourceMatches.length > 0 && (
+        <section aria-labelledby="resource-results" className="mt-14">
+          <h2 id="resource-results" className="flex items-center gap-2 font-serif text-2xl font-semibold">
+            <BookOpen className="w-5 h-5 text-primary" aria-hidden="true" /> Books and resources
+          </h2>
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            Matched on title, subject and summary — open one to search inside it.
+          </p>
+          <ol className="mt-5 grid gap-3">
+            {resourceMatches.map(({ doc, matchedOn }) => (
+              <li key={doc.slug}>
+                <Link
+                  href={`/resources/${doc.slug}`}
+                  className="group block rounded-2xl border border-border/70 bg-card p-5 hover:border-primary/40 hover:shadow-soft transition-all"
+                >
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                    <span className="inline-flex items-center gap-1.5 text-primary font-medium uppercase tracking-wider">
+                      <BookOpen className="w-3.5 h-3.5" aria-hidden="true" />
+                      {doc.kindLabel}
+                    </span>
+                    <span aria-hidden="true">·</span>
+                    <span>{doc.author}</span>
+                    <span aria-hidden="true">·</span>
+                    <span>{doc.words.toLocaleString()} words</span>
+                    <span className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
+                      matched in {matchedOn}
+                    </span>
+                  </div>
+                  <h3 className="mt-2 font-serif text-2xl font-semibold leading-snug text-balance group-hover:text-primary transition-colors">
+                    {doc.title}
+                  </h3>
+                  {doc.subtitle && <p className="mt-1 text-sm italic text-muted-foreground">{doc.subtitle}</p>}
+                  <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{doc.blurb}</p>
+                </Link>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
     </div>
   );
 }
@@ -237,7 +296,7 @@ function AudienceChip({
   );
 }
 
-export function SearchClient(props: { docs: SearchDoc[]; initialQuery: string }) {
+export function SearchClient(props: { docs: SearchDoc[]; resources?: ResourceSearchDoc[]; initialQuery: string }) {
   return (
     // useSearchParams needs a Suspense boundary when the page is prerendered.
     <Suspense fallback={<div className="text-sm text-muted-foreground">Loading search…</div>}>

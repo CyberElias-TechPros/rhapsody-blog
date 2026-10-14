@@ -83,7 +83,7 @@ export function buildFeed(posts: Devotional[], options: { limit?: number } = {})
     <description>${cdata(SITE.description)}</description>
     <language>${SITE.locale.replace('_', '-')}</language>
     <lastBuildDate>${lastBuildDate}</lastBuildDate>
-    <generator>${cdata('Next.js + content/devotionals')}</generator>
+    <generator>${cdata(`${SITE.name} — published daily`)}</generator>
     <copyright>${cdata(`© ${SITE.publisher}. ${SITE.attribution}`)}</copyright>
 ${itemXml}
   </channel>

@@ -16,8 +16,15 @@ ADMIN_PASSWORD=ChangeMe!2025-Strong-Enough
 # When unset, media is served from this Worker under /media/*.
 # MEDIA_PUBLIC_URL=https://media.example.com
 
-# Optional: API key for an outbound email provider used by the digest worker.
-# When unset, email delivery is disabled (subscribers are still stored).
-# EMAIL_API_URL=
-# EMAIL_API_KEY=
-# EMAIL_FROM="Meaning <no-reply@example.com>"
+# The deployed frontend origin (not this Worker's URL). The daily digest asks it what
+# today's devotional is: GET {SITE_URL}/api/today?full=1. In local dev, `next dev` on :3000.
+# Left empty, the digest skips with a log line instead of guessing a site to read from.
+SITE_URL=http://localhost:3000
+
+# Daily digest email. All three must be set or nothing is sent (by design — the subscriber
+# list keeps growing in D1 either way, so switching email on later is a secret, not a migration).
+# EMAIL_API_URL takes a Resend-shaped POST ({from,to,subject,html,text,headers}) with a
+# Bearer key — https://api.resend.com/emails is the intended value.
+EMAIL_API_URL=https://api.resend.com/emails
+EMAIL_API_KEY=re_your_resend_api_key
+EMAIL_FROM="Rhapsody of Realities <devotional@your-domain>"

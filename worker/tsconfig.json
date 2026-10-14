@@ -4,6 +4,11 @@
     "lib": ["ES2023"],
     "module": "ESNext",
     "moduleResolution": "bundler",
+    // Workers globals only — never Node's. @types/node is a devDependency here for its *module*
+    // declarations, because src/routes/subscribers.ts imports node:crypto (createHmac,
+    // timingSafeEqual) under the nodejs_compat flag in wrangler.jsonc. Locally those types would
+    // resolve from the site's node_modules one directory up, which is how CI — installing this
+    // directory on its own — caught that the dependency was not declared where it is used.
     "types": ["@cloudflare/workers-types"],
     "strict": true,
     "noUncheckedIndexedAccess": false,

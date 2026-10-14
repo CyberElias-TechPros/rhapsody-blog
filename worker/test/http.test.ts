@@ -34,15 +34,15 @@ describe("HTTP behavior", () => {
   });
 
   it("CORS: allow-listed origins get headers; others get none; preflight works", async () => {
-    const allowed = await apiFetch("/api/health", { headers: { origin: "http://localhost:8080" } });
-    expect(allowed.headers.get("access-control-allow-origin")).toBe("http://localhost:8080");
+    const allowed = await apiFetch("/api/health", { headers: { origin: "http://localhost:3000" } });
+    expect(allowed.headers.get("access-control-allow-origin")).toBe("http://localhost:3000");
 
     const disallowed = await apiFetch("/api/health", { headers: { origin: "https://evil.example" } });
     expect(disallowed.headers.get("access-control-allow-origin")).toBeNull();
 
     const pre = await apiFetch("/api/auth/login", {
       method: "OPTIONS",
-      headers: { origin: "http://localhost:8080", "access-control-request-method": "POST" },
+      headers: { origin: "http://localhost:3000", "access-control-request-method": "POST" },
     });
     expect(pre.status).toBe(204);
     expect(pre.headers.get("access-control-allow-methods")).toContain("POST");

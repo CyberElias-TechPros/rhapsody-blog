@@ -186,3 +186,24 @@
     @apply absolute -top-6 left-3 font-serif text-6xl text-primary/25 leading-none;
   }
 }
+
+/* ------------------------------------------------------------------ motion */
+
+/*
+ * The site animates a lot: fade-ins on every card, a pulsing dot on the hero, hover lifts. A
+ * reader who has asked their OS for less motion gets none of it, and the player dock stops
+ * sliding its progress bar. This is the whole cost of honouring that request.
+ */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
