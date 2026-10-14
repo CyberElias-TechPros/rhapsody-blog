@@ -4,8 +4,8 @@
  */
 
 export const SITE = {
-  name: 'Rhapsody Blog',
-  shortName: 'Rhapsody',
+  name: 'Devotional',
+  shortName: 'Devotional',
   tagline: 'The daily devotional, published as a blog.',
   description:
     'Every daily devotional from the Rhapsody of Realities monthly editions — the article, the opening scripture, the closing prayer, further study and the Bible reading plans — readable, searchable and shareable.',
