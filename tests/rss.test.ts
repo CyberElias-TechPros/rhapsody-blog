@@ -55,7 +55,9 @@ describe('buildFeed', () => {
   });
 
   it('describes the channel and points at itself', () => {
-    expect(feed).toContain(`<title><![CDATA[${SITE.name} — ${SITE.series}]]></title>`);
+    // The site is named after the series, so the channel title adds the tagline rather than
+    // repeating the name ("Rhapsody of Realities — Rhapsody of Realities").
+    expect(feed).toContain(`<title><![CDATA[${SITE.name} — ${SITE.tagline}]]></title>`);
     expect(feed).toContain(`<link>${absoluteUrl('/')}</link>`);
     expect(feed).toContain(`<atom:link href="${absoluteUrl('/feed.xml')}" rel="self"`);
     expect(feed).toContain('<language>en-GB</language>');

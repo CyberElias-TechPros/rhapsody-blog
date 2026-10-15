@@ -4,15 +4,17 @@ import { ArrowRight, CalendarDays, FileText } from 'lucide-react';
 import { PageHeader } from '@/components/common/StateBlocks';
 import { getContentStats, getEditionGroups } from '@/lib/content';
 import { formatDate } from '@/lib/format';
-import { SITE } from '@/lib/site';
+import { pageMetadata } from '@/lib/seo';
 import { AUDIENCE_ORDER } from '@/lib/audiences';
 import type { Edition } from '@/lib/types';
 
-export const metadata: Metadata = {
-  title: 'Editions',
-  description: `Monthly editions of ${SITE.series} and its readers' editions on ${SITE.name} — grouped by who they are for; pick a month to read every day of it.`,
-  alternates: { canonical: '/editions' },
-};
+export const metadata: Metadata = pageMetadata({
+  title: 'Rhapsody of Realities Monthly Editions 2026 — Read Every Month Online',
+  description:
+    'Every monthly edition of Rhapsody of Realities, TeeVo for teens and Rhapsody for Early Readers — pick a month (October 2026, September 2026…) to read all of its daily devotionals online, free.',
+  path: '/editions',
+  absolute: true,
+});
 
 /**
  * Every edition the corpus holds, grouped under the audience it was written for. A month is a
@@ -28,7 +30,7 @@ export default function EditionsPage() {
     <div className="container py-16 md:py-20">
       <PageHeader
         eyebrow="Browse by month"
-        title="Editions"
+        title="Rhapsody of Realities editions"
         subtitle={`Each monthly PDF becomes ${perMonth ? `${perMonth.postCount}` : 'up to 31'} daily blog posts — the article, the opening scripture, the closing prayer or confession, further study and, where the audience prints them, the Bible reading plans. ${AUDIENCE_ORDER.length} audiences are published here.`}
       />
 

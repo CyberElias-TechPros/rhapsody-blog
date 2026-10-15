@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Cloudflare Worker backend for Meaning: API, auth, D1 data layer, Telegram sync, R2 media mirroring.",
+  "description": "Cloudflare Worker backend for Rhapsody of Realities: API, auth, D1 data layer, daily email digest, Telegram sync, R2 media mirroring.",
   "scripts": {
     "dev": "wrangler dev --port 8787",
     "deploy": "wrangler deploy",

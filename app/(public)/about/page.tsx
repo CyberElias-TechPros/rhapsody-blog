@@ -1,6 +1,20 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { BookOpen, BookmarkPlus, Globe, Puzzle, Rss, Search, Share2, ShieldCheck, Sunrise } from 'lucide-react';
+import {
+  BookOpen,
+  BookmarkPlus,
+  Flame,
+  Globe,
+  Headphones,
+  Puzzle,
+  Rss,
+  Search,
+  Share2,
+  ShieldCheck,
+  Smartphone,
+  Sunrise,
+  Type,
+} from 'lucide-react';
 import { NewsletterForm } from '@/components/common/NewsletterForm';
 import { AdSlot } from '@/components/common/AdSlot';
 import { PageHeader } from '@/components/common/StateBlocks';
@@ -8,7 +22,7 @@ import { getContentStats, getEditions } from '@/lib/content';
 import { SITE } from '@/lib/site';
 
 export const metadata: Metadata = {
-  title: 'About',
+  title: 'About This Site',
   description: `Why ${SITE.name} exists: to get every day's ${SITE.series} devotional by ${SITE.author} to anyone who needs it — free, with nothing to install or sign up for.`,
   alternates: { canonical: '/about' },
 };
@@ -32,7 +46,27 @@ const PROMISES = [
   {
     icon: Share2,
     title: 'Share a day, not a screenshot',
-    body: 'Every day has one permanent link. Send it on WhatsApp, in an email or in a message to someone who needs it today — the whole article arrives, not a photo of a page.',
+    body: 'Every day has one permanent link. Send it on WhatsApp, Telegram or by email, copy the whole day already formatted for a WhatsApp group, or make a verse image for your status — the words arrive, not a photo of a page.',
+  },
+  {
+    icon: Headphones,
+    title: 'Listen on the way',
+    body: 'Every devotional reads itself aloud — scripture, message, prayer and reading plan — at the speed you choose, and keeps playing while you browse.',
+  },
+  {
+    icon: Flame,
+    title: 'Keep the habit',
+    body: 'A reading streak, a calendar of the days you have read, your own notes under each devotional, Bible-plan ticks and a daily calendar reminder — all kept on your phone, no account.',
+  },
+  {
+    icon: Type,
+    title: 'Comfortable to read',
+    body: 'Larger text, a low-vision typeface, wider line spacing, sepia and dark themes and a focus mode — set once, used on every page.',
+  },
+  {
+    icon: Smartphone,
+    title: 'Works without data',
+    body: 'Install it like an app. Every day you open is kept for offline reading, and a whole month can be saved before a journey.',
   },
   {
     icon: Rss,
@@ -171,7 +205,8 @@ export default function AboutPage() {
             rhapsodyofrealities.org
           </a>
           . If the publisher would like anything on this site changed or removed, that request is
-          honoured immediately — write to us and it will be done the same day.
+          honoured immediately — <Link href="/contact" className="text-primary underline underline-offset-4">write to us</Link> and it
+          will be done the same day.
         </p>
       </section>
 

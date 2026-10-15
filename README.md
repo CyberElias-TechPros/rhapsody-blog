@@ -1,13 +1,16 @@
-# Rhapsody Blog — the daily devotional, published as a blog
+# Rhapsody of Realities — the daily devotional, on the open web
 
-Every day's article from the **Rhapsody of Realities** monthly editions — the message, the opening
-scripture, the closing prayer (or confession), further study and both Bible reading plans — published
-as its own permalink, searchable, shareable and readable in a feed app.
+The site is called **Rhapsody of Realities**. Every day's article from the monthly editions — the message, the
+opening scripture, the closing prayer (or confession), further study and both Bible reading plans — is
+published as its own permalink: searchable, shareable, readable aloud, readable offline, and
+installable as an app. Readers keep a streak, notes, Bible-plan progress and reading settings on their
+own device, with no account. See [docs/USER-FLOWS.md](docs/USER-FLOWS.md) for who it serves and how.
 
 > **Attribution.** Articles are taken from the *Rhapsody of Realities* monthly editions by
 > **Pastor Chris Oyakhilome**, © **LoveWorld Publishing** (ISSN 1596-6984). This project republishes
 > them with attribution on every page, in the RSS feed and in the article's structured data; all rights
-> remain with the publisher. Nothing here is an official LoveWorld property.
+> remain with the publisher. Nothing here is an official LoveWorld property — the site says so in its
+> footer, About page, FAQ and terms (`SITE.disclaimer` in `lib/site.ts`).
 
 On top of that sits the **kids' edition as a magazine**: 9 issues of *Rhapsody of Realities for Kids*
 (RORK), 448 printed pages with their artwork, under `/kids`. It is a different shape — a monthly of
@@ -89,15 +92,25 @@ The previous Vite + React 18 SPA ("Meaning", which mirrored Telegram channels) i
 | `/kids/2026-04-kids` | One issue, page by page: the printed page, then the words recovered from it (`#page-12` links straight to a page) |
 | `/editions` | Every monthly edition, grouped by audience, with counts and date ranges |
 | `/editions/2026-10`, `/editions/2026-10-teens` | One edition, day 1 first — a readers' edition carries its audience in the slug |
-| `/today` | A server redirect to the current day's article — the URL a home-screen shortcut, a QR code or a shared "read today's" link should use |
+| `/today` | A server redirect to the current day's article — the URL a home-screen shortcut, a QR code or a shared "read today's" link should use. `?audience=` or the reader's saved edition (cookie) picks Adults, TeeVo or Early Readers |
+| `/teevo`, `/early-readers` | Landing pages for the teens and children's editions: today's devotional in that edition, recent days, every month, an explanation and FAQ |
+| `/calendar` | A month grid of every day (`?month=`, `?audience=`), the days you have read ticked, and "go to a date" |
+| `/go/2026-10-15` | Redirect to that date's devotional (`?audience=`); a day the library lacks goes to the nearest earlier one |
+| `/random` | "Surprise me": a released devotional at random, in the reader's edition |
+| `/bible`, `/bible/romans` | Devotionals grouped by the book of their opening scripture, in chapter-and-verse order (47 books) |
+| `/me` | **My Rhapsody** — streaks, 12-week activity, continue reading, history, notes, Bible-plan progress, preferences, reminders, offline status, export / import / delete (`noindex`, all local) |
+| `/faq` | Questions readers ask, with `FAQPage` structured data |
+| `/privacy`, `/terms`, `/contact` | Privacy policy (incl. AdSense disclosures), terms of use, contact (email or a prefilled GitHub issue) |
+| `/offline` | The service worker's fallback, listing the devotionals saved on the device |
+| `/og.png`, `/og/devotionals/[slug]` | The site's share card and one card per devotional (1200×630, prerendered) |
 | `/reading-plans` | The day's 1-Year and 2-Year Bible reading plans across the editions, the week ahead, and `?date=` / `?audience=` for any other day |
 | `/resources` | The shelf that is not a daily devotional: books, studies, sermon notes and programme notes, grouped by what they are |
 | `/resources/the-power-of-your-mind` | One book or study — sticky table of contents, Listen, Save, Share, structured data, and a caveat with its OCR confidence where the words were recognised from a scan |
 | `/library` | The reader's saved shelf, resolved from the slugs on their device (`noindex`, no account, works offline) |
 | `/search` | Client-side search over a compact index (no round-trip), devotionals and books alike; `?q=` is the source of truth |
 | `/about` | Why the site exists — getting the daily word to everyone — plus attribution and provenance |
-| `/feed.xml` | RSS 2.0 carrying each day's **complete** article — the adult edition, which is what the channel is named after |
-| `/sitemap.xml`, `/robots.txt`, `/ads.txt`, `/manifest.webmanifest` | Generated from the corpus; `ads.txt` authorises Google AdSense; the manifest installs the site with `/today` as its start URL |
+| `/feed.xml` | RSS 2.0 carrying each day's **complete** article — the adult edition, released days only, regenerated hourly |
+| `/sitemap.xml`, `/robots.txt`, `/ads.txt`, `/manifest.webmanifest`, `/sw.js` | Generated from the corpus; `ads.txt` authorises Google AdSense; the manifest installs the site with `/today` as its start URL; `sw.js` is the offline service worker |
 | `/api/today` | The day's devotional as JSON (site timezone, `?audience=`, `?full=1` for the whole article) — what the Worker's daily email reads |
 | `/api/library` | `?slugs=a,b,c` → card-sized items for the saved shelf; a lookup, never a store |
 | `/api/tts` | One spoken section as audio, when a studio voice key is configured; otherwise it says so and the player stays on the browser voice |
@@ -132,6 +145,44 @@ Four things a daily devotional has to get right that a normal blog does not:
   the corpus to the browser.
 - **The reading plans have to be findable.** They are printed at the foot of every article and
   collected on `/reading-plans`, which answers for any day (`?date=`) and any audience.
+
+
+### The reader's own tools (all in the browser)
+
+Nothing below needs an account or a server; the data lives in `localStorage` (`lib/reader-data.ts`
+lists every key) and can be exported, imported or deleted on `/me`.
+
+- **Progress and habit** — a reading progress bar, "continue where you left off", automatic
+  "finished" at the end of an article (after a minimum reading time) or "Mark as read", a daily
+  streak, a 12-week activity map, and a home-page strip for returning readers.
+- **Notes** under every devotional, autosaved, searchable on `/me`.
+- **Bible reading plan** ticks for the 1-year and 2-year portions, with running totals.
+- **Reading settings** ("Aa"): text size, typeface (serif, sans, Atkinson Hyperlegible), line
+  spacing, column width, light / sepia / dark theme, Bible translation for scripture links —
+  applied before first paint by an inline script, so nothing jumps. Plus focus mode and a print
+  stylesheet.
+- **Sharing**: WhatsApp, Telegram, Facebook, X, email, SMS, the native share sheet, "copy full
+  devotional" formatted for WhatsApp groups, and verse images (status, post, square) drawn on a
+  canvas.
+- **Scripture links**: every reference in the scripture, further study and reading plans opens on
+  BibleGateway in the reader's translation (`lib/bible.ts` parses them).
+- **Daily reminder** as a repeating calendar event (`.ics` or Google Calendar).
+- **Edition preference** (Adults / TeeVo / Early Readers) in a cookie, so the server renders the
+  right hero and `/today` target.
+- **Offline and install**: `public/sw.js` keeps every page opened (network-first, so "today" is
+  always fresh online), `/offline` lists what is saved, "Save for offline" caches a whole edition,
+  and an install button covers Chrome/Android and iPhone.
+- **Keyboard shortcuts** (`?` lists them), back-to-top, breadcrumbs, recent searches, "Surprise me".
+
+### Search visibility
+
+Readers search for the series name with a date ("rhapsody of realities 15 october 2026"), "today",
+a month ("… october 2026 pdf"), "TeeVo" and the children's editions. `lib/seo.ts` builds titles that
+lead with exactly that ("Rhapsody of Realities 15 October 2026: The Reality of Christianity"), the
+descriptions, keywords and JSON-LD (`WebSite`, `Article`, `BreadcrumbList`, `CollectionPage`,
+`FAQPage`); landing pages answer each query (`/teevo`, `/early-readers`, `/editions/…`,
+`/bible/…`, `/faq`), and every devotional has its own share card. No hidden text and no keyword
+stuffing — both are penalised. Submitting the sitemap in Search Console is listed in the roadmap.
 
 ---
 
@@ -364,10 +415,10 @@ NEXT_PUBLIC_ADS_ENABLED=true NEXT_PUBLIC_ADSENSE_SLOT_FEED=1234567890 npm run de
 ## Tests
 
 ```bash
-npm test          # 257 tests
+npm test          # 332 tests
 npm run typecheck
 npm run lint
-npm run build     # prerenders all 853 devotionals, 10 resources and 9 kids' issues
+npm run build     # prerenders all 853 devotionals and their share cards, 10 resources, 9 kids' issues and 47 Bible-book pages
 ```
 
 The Worker has its own suite, in its own toolchain:
@@ -393,6 +444,16 @@ needs the secrets to exist; the example file is the local-development contract, 
 | `tests/tts.test.ts` | Speech scripts for a real devotional and a real book, Markdown → prose, chunking under the browser's ceiling, durations, voice picking |
 | `tests/resources.test.ts` | The shelf: every document loaded, slugs matching filenames, no furniture in the body, unique table-of-contents anchors, grouping, stats, search |
 | `tests/library.test.ts` | `GET /api/library`: all three corpora resolved, order preserved, unknown slugs reported, the 200-slug limit, and a card-sized answer |
+| `tests/seo.test.ts` | Search titles that lead with series + date, descriptions that list only what a day prints, keywords, JSON-LD (incl. `</script>` escaping), `pageMetadata` always carrying a share image |
+| `tests/bible.test.ts` | The 66-book canon, reference parsing (ranges, continuations, translations, never swallowing "1 Kings"), BibleGateway links, stripping the reference printed inside a verse |
+| `tests/reader-data.test.ts` | The reader's business rules: streaks across days and months, completion only once and only after reading time, resume window, preference whitelisting, recent searches |
+| `tests/reader-components.test.tsx` | Notes autosave, plan ticks, mark-as-read crediting and un-crediting the day, reading settings reaching `<html>`, scripture links in the chosen translation, the returning-reader strip, the calendar and My Rhapsody — rendered in jsdom |
+| `tests/local-store.test.ts` | The local store: stable snapshots, validation, cross-tab sync, export/import/clear touching only `rhapsody.*` keys |
+| `tests/reminders-share.test.ts` | The `.ics` reminder (RFC 5545 folding, escaping, midnight roll-over), the Google Calendar link, the WhatsApp-formatted devotional and share intents |
+| `tests/service-worker.test.ts` | `public/sw.js` routing: pages network-first; APIs, auth, admin, ads and router payloads never cached; cache names shared with the app |
+| `tests/content-hubs.test.ts` | Devotionals by Bible book (complete, canonical, chapter order), calendar months, date resolution, the random pick |
+| `tests/feed-route.test.ts` | The feed carries only days that have arrived in the site zone |
+| `tests/brand.test.ts` | The name is Rhapsody of Realities everywhere, the disclaimer is present, no leftover brand, every manifest icon exists |
 
 The coverage check is the one that matters: it re-reads the September and October adult PDFs, rebuilding every visual line of
 every spread, and asserts that each line of real content appears in the extracted fields — allowing
@@ -459,6 +520,10 @@ deliberately *not* prerendered — they answer for the current day.
 
 Three things worth knowing:
 
+- **Icons.** `npm run icons` regenerates `favicon.ico`, the PNG app icons, the maskable icon and the
+  Apple touch icon from `public/icon.svg`.
+- **Contact address.** Set `NEXT_PUBLIC_CONTACT_EMAIL` for `/contact`; without it the contact form
+  opens a prefilled issue on this repository.
 - **Site verification.** Domain-ownership codes live in `SITE_VERIFICATION` (`lib/site.ts`). The
   root layout renders each one as a plain `<meta>` in the `<head>` of every page. Okecbot's code is
   also served as `public/okecbot-verification.txt`. That file holds only the code, with no

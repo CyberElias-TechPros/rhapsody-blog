@@ -10,6 +10,9 @@ export function DayNav({ previous, next }: { previous?: DevotionalSummary; next?
   const card = (post: DevotionalSummary, direction: 'previous' | 'next') => (
     <Link
       href={`/devotionals/${post.slug}`}
+      rel={direction === 'previous' ? 'prev' : 'next'}
+      data-shortcut={direction === 'previous' ? 'prev' : 'next'}
+      aria-keyshortcuts={direction === 'previous' ? 'ArrowLeft' : 'ArrowRight'}
       className={`group flex-1 rounded-2xl border border-border/70 bg-card px-5 py-4 transition-all hover:border-primary/40 hover:shadow-soft ${
         direction === 'next' ? 'text-right' : ''
       }`}

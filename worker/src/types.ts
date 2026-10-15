@@ -1,5 +1,5 @@
 /**
- * Shared environment + domain types for the Meaning API Worker.
+ * Shared environment + domain types for the Rhapsody of Realities API Worker.
  */
 
 export interface Env {

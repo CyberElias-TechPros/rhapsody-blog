@@ -77,7 +77,7 @@ export function buildFeed(posts: Devotional[], options: { limit?: number } = {})
   return `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>${cdata(`${SITE.name} — ${SITE.series}`)}</title>
+    <title>${cdata(`${SITE.name} — ${SITE.tagline}`)}</title>
     <link>${escapeXml(absoluteUrl('/'))}</link>
     <atom:link href="${escapeXml(absoluteUrl('/feed.xml'))}" rel="self" type="application/rss+xml" />
     <description>${cdata(SITE.description)}</description>

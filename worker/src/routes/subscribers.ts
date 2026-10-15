@@ -82,10 +82,10 @@ export function registerSubscriberRoutes(router: Router): void {
 
     await subscribersRepo.unsubscribe(ctx.env.DB, emailSchema.parse(email));
     return new Response(
-      `<!doctype html><html lang="en"><meta charset="utf-8"><title>Unsubscribed — Meaning</title>
+      `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="robots" content="noindex"><title>Unsubscribed — Rhapsody of Realities</title>
        <body style="font-family:system-ui;max-width:40rem;margin:8rem auto;padding:0 1.5rem;color:#231a12">
        <h1>You have been unsubscribed</h1>
-       <p>You will no longer receive the Meaning digest. Changed your mind? Re-subscribe any time on
+       <p>You will no longer receive the daily Rhapsody of Realities devotional by email. Changed your mind? Re-subscribe any time on
        <a href="/">the site</a>.</p></body>`,
       { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
     );

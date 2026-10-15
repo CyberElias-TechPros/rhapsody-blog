@@ -30,6 +30,8 @@ interface ListenButtonProps {
   label?: string;
   /** Show "· 4 min" after the label. */
   showDuration?: boolean;
+  /** `data-shortcut` hook for `KeyboardShortcuts` (the article page's main button uses `listen`). */
+  shortcut?: string;
 }
 
 export function ListenButton({
@@ -40,6 +42,7 @@ export function ListenButton({
   className,
   label,
   showDuration = false,
+  shortcut,
 }: ListenButtonProps) {
   const { script: current, status, play, toggle } = useAudio();
   const isCurrent = current?.href === script.href;
@@ -80,7 +83,7 @@ export function ListenButton({
   const text = active ? 'Pause' : paused ? 'Resume' : resumeAt ? 'Resume listening' : (label ?? 'Listen');
 
   return (
-    <Button type="button" variant={variant} size={size} onClick={onClick} className={cn('gap-2', className)}>
+    <Button type="button" variant={variant} size={size} onClick={onClick} className={cn('gap-2', className)} data-shortcut={shortcut}>
       {active ? <Pause className="w-4 h-4" aria-hidden="true" /> : <Play className="w-4 h-4" aria-hidden="true" />}
       <span>
         {text}

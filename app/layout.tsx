@@ -4,61 +4,68 @@ import './globals.css';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { Providers } from '@/components/providers';
+import { READING_PREFS_SCRIPT } from '@/lib/reader-data';
+import { SITE_KEYWORDS, jsonLdString, websiteJsonLd } from '@/lib/seo';
 import { SITE, SITE_VERIFICATION, absoluteUrl } from '@/lib/site';
+
+const DEFAULT_TITLE = `${SITE.name} Today — ${SITE.tagline}`;
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
   title: {
-    default: `${SITE.name} — ${SITE.tagline}`,
-    template: `%s · ${SITE.name}`,
+    default: DEFAULT_TITLE,
+    // Pages whose title already leads with the series name (every devotional, edition and hub)
+    // set an absolute title instead, so the brand is never said twice.
+    template: `%s | ${SITE.name}`,
   },
   description: SITE.description,
   applicationName: SITE.name,
   authors: [{ name: SITE.author }],
-  creator: SITE.name,
+  creator: SITE.author,
   publisher: SITE.publisher,
-  keywords: [
-    'Rhapsody of Realities',
-    'daily devotional',
-    'Pastor Chris Oyakhilome',
-    'Bible reading plan',
-    'devotional blog',
-  ],
+  keywords: SITE_KEYWORDS,
   category: 'religion',
   alternates: {
     canonical: '/',
     types: {
-      'application/rss+xml': [{ url: absoluteUrl('/feed.xml'), title: `${SITE.name} — daily devotionals` }],
+      'application/rss+xml': [{ url: absoluteUrl('/feed.xml'), title: `${SITE.name} — daily devotional feed` }],
     },
   },
   openGraph: {
     type: 'website',
     siteName: SITE.name,
-    title: `${SITE.name} — ${SITE.tagline}`,
+    title: DEFAULT_TITLE,
     description: SITE.description,
     url: absoluteUrl('/'),
-    locale: SITE.locale.replace('_', '-'),
-    images: [{ url: absoluteUrl(SITE.ogImage), width: 1200, height: 630, alt: SITE.name }],
+    locale: SITE.locale,
+    images: [{ url: absoluteUrl(SITE.ogImage), width: 1200, height: 630, alt: `${SITE.name} — daily devotional` }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: `${SITE.name} — ${SITE.tagline}`,
+    title: DEFAULT_TITLE,
     description: SITE.description,
     images: [absoluteUrl(SITE.ogImage)],
   },
   robots: {
     index: true,
     follow: true,
-    googleBot: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1 },
+    googleBot: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1, 'max-video-preview': -1 },
   },
   icons: {
     icon: [
-      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/favicon.ico', sizes: '16x16 32x32 48x48' },
       // SVG for the platforms that take it: one small file, sharp at every size.
       { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/icon-192.png', type: 'image/png', sizes: '192x192' },
     ],
-    apple: '/icon.svg',
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180' }],
   },
+  appleWebApp: {
+    capable: true,
+    title: SITE.shortName,
+    statusBarStyle: 'default',
+  },
+  formatDetection: { telephone: false, address: false, email: false },
 };
 
 export const viewport: Viewport = {
@@ -71,6 +78,12 @@ export const viewport: Viewport = {
 };
 
 /**
+ * Captures the browser's install prompt if it fires before React hydrates (see
+ * `components/pwa/install.ts`), and applies saved reading settings before first paint.
+ */
+const HEAD_SCRIPT = `${READING_PREFS_SCRIPT}window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__rhapsodyInstallPrompt=e;});`;
+
+/**
  * Fonts are loaded with plain <link> tags rather than `next/font`: `next/font/google`
  * downloads the families at build time, which fails in build environments without access to
  * fonts.googleapis.com. The stylesheet is still fetched by the browser at runtime, and the
@@ -80,7 +93,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     // globals.css sets `scroll-behavior: smooth`; this tells the router that route changes
     // should honour it instead of jumping to the top instantly.
-    <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
+    <html lang="en-GB" data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
         {/* Domain-ownership proofs (see `SITE_VERIFICATION`). These are plain tags, not
             `metadata.verification`, because verifiers read the served <head>. On a dynamic
@@ -90,6 +103,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         {Object.entries(SITE_VERIFICATION).map(([name, content]) => (
           <meta key={name} name={name} content={content} />
         ))}
+        <script dangerouslySetInnerHTML={{ __html: HEAD_SCRIPT }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         {/* eslint-disable-next-line @next/next/no-page-custom-font -- This IS the App Router's
@@ -101,6 +115,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         />
       </head>
       <body className="min-h-screen flex flex-col gradient-warm">
+        {/* The site and the publication it is about, for search engines (one per page). */}
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(websiteJsonLd()) }} />
         <Providers>
           <a
             href="#main"
