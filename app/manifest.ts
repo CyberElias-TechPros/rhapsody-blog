@@ -1,53 +1,45 @@
 import type { MetadataRoute } from 'next';
-import { SITE, absoluteUrl } from '@/lib/site';
+import { SITE } from '@/lib/site';
 
 /**
  * Installability.
  *
  * A reader who wants today's devotional on their home screen should get today's devotional, not a
  * bookmark to whatever day they installed it on — so `start_url` is `/today`, the server redirect
- * that always resolves to the current day. Everything else here is the minimum a browser needs to
- * offer "Add to home screen": a name, a scope, a display mode, a theme colour and an icon.
+ * that always resolves to the current day. With the service worker (`public/sw.js`) the installed
+ * app opens offline too, on the pages the reader has already read or saved.
  *
- * The icon is an SVG rather than a set of PNGs on purpose: it is one small file that stays sharp at
- * every size, and `sizes: "any"` tells the platform it covers all of them.
+ * Chromium's install criteria want 192 px and 512 px raster icons; the SVG stays for platforms
+ * that prefer it, and the maskable PNG is full-bleed so launchers can crop it to any shape.
+ * `npm run icons` regenerates every PNG from `public/icon.svg`.
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
+    id: '/',
     name: SITE.name,
     short_name: SITE.shortName,
     description: SITE.description,
-    start_url: absoluteUrl('/today'),
-    scope: absoluteUrl('/'),
+    start_url: '/today?source=app',
+    scope: '/',
     display: 'standalone',
+    display_override: ['standalone', 'minimal-ui'],
     orientation: 'portrait',
     background_color: '#fdfaf5',
     theme_color: '#b45309',
     categories: ['books', 'education', 'lifestyle'],
-    lang: SITE.locale,
+    lang: 'en-GB',
     dir: 'ltr',
     icons: [
-      {
-        src: absoluteUrl('/icon.svg'),
-        sizes: 'any',
-        type: 'image/svg+xml',
-        purpose: 'any',
-      },
-      {
-        src: absoluteUrl('/icon.svg'),
-        sizes: 'any',
-        type: 'image/svg+xml',
-        // A maskable icon keeps the mark inside the safe zone so launchers can crop it to a
-        // circle, a squircle or a square without cutting the book in half.
-        purpose: 'maskable',
-      },
-      {
-        // The social card doubles as a wide splash image; it is already on the CDN.
-        src: absoluteUrl(SITE.ogImage),
-        sizes: '1200x630',
-        type: 'image/jpeg',
-        purpose: 'any',
-      },
+      { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+      { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+      { src: '/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+      { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+    ],
+    shortcuts: [
+      { name: 'Today’s devotional', short_name: 'Today', url: '/today?source=shortcut', icons: [{ src: '/icon-192.png', sizes: '192x192' }] },
+      { name: 'TeeVo — for teens', short_name: 'TeeVo', url: '/teevo', icons: [{ src: '/icon-192.png', sizes: '192x192' }] },
+      { name: 'Bible reading plan', short_name: 'Bible plan', url: '/reading-plans', icons: [{ src: '/icon-192.png', sizes: '192x192' }] },
+      { name: 'My Rhapsody', short_name: 'My Rhapsody', url: '/me', icons: [{ src: '/icon-192.png', sizes: '192x192' }] },
     ],
   };
 }

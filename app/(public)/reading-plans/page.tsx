@@ -11,13 +11,18 @@ import { devotionalScript } from '@/lib/tts';
 import { isValidDateIso } from '@/lib/time';
 import { formatDate, formatDayHeading } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import { pageMetadata } from '@/lib/seo';
+import { PlanCheck } from '@/components/reader/PlanCheck';
+import { PlanProgress } from '@/components/reader/PlanProgress';
+import { ScriptureText } from '@/components/reader/ScriptureText';
 
-export const metadata: Metadata = {
-  title: 'Bible reading plans',
+export const metadata: Metadata = pageMetadata({
+  title: 'Rhapsody of Realities Bible Reading Plan for Today — 1-Year & 2-Year Plans',
   description:
-    'The one-year and two-year Bible reading plans printed in every daily devotional — today’s portion, the week around it, and any day you want to catch up on.',
-  alternates: { canonical: '/reading-plans' },
-};
+    'Today’s Rhapsody of Realities Bible reading plan: the 1-year and 2-year portions printed in the daily devotional, the week around today, any day you missed — and tick them off to track your progress.',
+  path: '/reading-plans',
+  absolute: true,
+});
 
 /**
  * The plans are printed on the same page as the devotional and change every day, so this page
@@ -52,7 +57,7 @@ export default async function ReadingPlansPage({ searchParams }: Props) {
     <div className="container py-16 md:py-20 max-w-5xl">
       <PageHeader
         eyebrow="Read through the Bible"
-        title="The reading plans, day by day."
+        title="Rhapsody of Realities Bible reading plan"
         subtitle="Every edition of Rhapsody of Realities prints two Bible reading plans with the day’s message: the whole Bible in a year, and again more gently over two. They are reproduced here exactly, for today and for any day you want."
       />
 
@@ -100,21 +105,32 @@ export default async function ReadingPlansPage({ searchParams }: Props) {
           <dl className="mt-8 grid sm:grid-cols-2 gap-4">
             {focusPost.oneYearPlan && (
               <div className="rounded-2xl border border-border/70 bg-background/80 px-5 py-4">
-                <dt className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground font-medium">
-                  <Layers className="w-3.5 h-3.5" aria-hidden="true" /> 1-Year plan
+                <dt className="flex items-center justify-between gap-2 text-xs uppercase tracking-wide text-muted-foreground font-medium">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Layers className="w-3.5 h-3.5" aria-hidden="true" /> 1-Year plan
+                  </span>
+                  <PlanCheck slug={focusPost.slug} date={focusPost.date} which="one" portion={focusPost.oneYearPlan} />
                 </dt>
-                <dd className="mt-2 font-serif text-lg md:text-xl font-medium leading-snug">{focusPost.oneYearPlan}</dd>
+                <dd className="mt-2 font-serif text-lg md:text-xl font-medium leading-snug">
+                  <ScriptureText text={focusPost.oneYearPlan} />
+                </dd>
               </div>
             )}
             {focusPost.twoYearPlan && (
               <div className="rounded-2xl border border-border/70 bg-background/80 px-5 py-4">
-                <dt className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground font-medium">
-                  <Layers className="w-3.5 h-3.5" aria-hidden="true" /> 2-Year plan
+                <dt className="flex items-center justify-between gap-2 text-xs uppercase tracking-wide text-muted-foreground font-medium">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Layers className="w-3.5 h-3.5" aria-hidden="true" /> 2-Year plan
+                  </span>
+                  <PlanCheck slug={focusPost.slug} date={focusPost.date} which="two" portion={focusPost.twoYearPlan} />
                 </dt>
-                <dd className="mt-2 font-serif text-lg md:text-xl font-medium leading-snug">{focusPost.twoYearPlan}</dd>
+                <dd className="mt-2 font-serif text-lg md:text-xl font-medium leading-snug">
+                  <ScriptureText text={focusPost.twoYearPlan} />
+                </dd>
               </div>
             )}
           </dl>
+          <PlanProgress />
 
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Button asChild className="gradient-hero text-primary-foreground border-0 shadow-soft">

@@ -91,6 +91,34 @@
     --sidebar-border: 25 20% 18%;
     --sidebar-ring: 28 90% 60%;
   }
+
+  /* Sepia — a paper-toned light theme for long reading sessions (chosen in Reading settings or
+     the theme menu). Tailwind's `dark:` variants do not apply to it, which is the point. */
+  .sepia {
+    --background: 38 45% 90%;
+    --foreground: 28 35% 15%;
+    --card: 40 52% 94%;
+    --card-foreground: 28 35% 15%;
+    --popover: 40 52% 94%;
+    --popover-foreground: 28 35% 15%;
+    --primary: 20 72% 34%;
+    --primary-foreground: 40 55% 96%;
+    --primary-glow: 28 82% 48%;
+    --secondary: 36 38% 84%;
+    --secondary-foreground: 28 35% 18%;
+    --muted: 36 34% 86%;
+    --muted-foreground: 28 20% 34%;
+    --accent: 40 80% 48%;
+    --accent-foreground: 28 35% 14%;
+    --destructive: 0 70% 45%;
+    --destructive-foreground: 40 55% 96%;
+    --border: 34 28% 77%;
+    --input: 34 28% 77%;
+    --ring: 20 72% 34%;
+    --gradient-hero: linear-gradient(135deg, hsl(20 72% 34%) 0%, hsl(28 82% 46%) 50%, hsl(40 78% 52%) 100%);
+    --gradient-warm: linear-gradient(180deg, hsl(38 45% 90%) 0%, hsl(36 40% 86%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(40 52% 94%) 0%, hsl(37 44% 90%) 100%);
+  }
 }
 
 @layer base {
@@ -140,6 +168,11 @@
   }
   .text-pretty {
     text-wrap: pretty;
+  }
+  /* The article's reading measure; Reading settings can narrow or widen it. Lives in the
+     utilities layer so it beats `.container`'s breakpoint max-widths. */
+  .reading-column {
+    max-width: 48rem;
   }
 }
 
@@ -205,5 +238,139 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* ------------------------------------------------------------ reading settings */
+
+/*
+ * Reader-chosen typography, applied through `<html data-reading-*>` attributes (set before first
+ * paint by the inline script in the root layout, then kept in sync by `ReadingPrefsSync`).
+ * Only the article text scales — navigation and controls keep their size.
+ */
+:root {
+  --reading-scale: 1;
+  --reading-leading: 1.8;
+}
+html[data-reading-size='sm'] {
+  --reading-scale: 0.9;
+}
+html[data-reading-size='lg'] {
+  --reading-scale: 1.15;
+}
+html[data-reading-size='xl'] {
+  --reading-scale: 1.32;
+}
+html[data-reading-leading='relaxed'] {
+  --reading-leading: 2.05;
+}
+html[data-reading-leading='loose'] {
+  --reading-leading: 2.35;
+}
+html[data-reading-width='narrow'] .reading-column {
+  max-width: 38rem;
+}
+html[data-reading-width='wide'] .reading-column {
+  max-width: 62rem;
+}
+
+.reading-body .prose-blog p,
+.reading-body .prose-blog ul,
+.reading-body .reading-text {
+  font-size: calc(1.125rem * var(--reading-scale));
+  line-height: var(--reading-leading);
+}
+.reading-body .scripture-card {
+  font-size: calc(1.125rem * var(--reading-scale));
+}
+html[data-reading-font='sans'] .reading-body :is(.prose-blog, .scripture-card, .reading-text) {
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+/* Atkinson Hyperlegible was designed for low-vision readers; it is loaded only when chosen. */
+html[data-reading-font='legible'] .reading-body :is(.prose-blog, .scripture-card, .reading-text) {
+  font-family: 'Atkinson Hyperlegible', Verdana, ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.01em;
+  word-spacing: 0.06em;
+}
+html[data-reading-font='legible'] .reading-body .prose-dropcap > p:first-of-type::first-letter,
+html[data-reading-font='sans'] .reading-body .prose-dropcap > p:first-of-type::first-letter {
+  font-family: Fraunces, ui-serif, Georgia, serif;
+}
+
+/* Focus mode: the article and nothing else. Toggled per visit from the reading toolbar. */
+html[data-focus='on'] [data-site-header],
+html[data-focus='on'] [data-site-footer],
+html[data-focus='on'] [data-focus-hide] {
+  display: none !important;
+}
+
+/* Scripture links: a quiet dotted underline, so a verse reads as text first and a link second. */
+.bible-ref {
+  text-decoration: underline dotted;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  text-decoration-color: hsl(var(--primary) / 0.55);
+}
+.bible-ref:hover {
+  color: hsl(var(--primary));
+  text-decoration-style: solid;
+}
+
+/* ------------------------------------------------------------ print */
+
+/*
+ * "Print" (or Save as PDF) gives the devotional as the booklet prints it: black on white, no
+ * navigation, buttons, ads or player — and the source URL at the end so a printout can be traced.
+ */
+@media print {
+  @page {
+    margin: 18mm 16mm;
+  }
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+  [data-site-header],
+  [data-site-footer],
+  [data-focus-hide],
+  [data-print-hide],
+  .ad-slot,
+  button,
+  nav[aria-label='Devotional navigation'],
+  [role='toolbar'],
+  [data-sonner-toaster] {
+    display: none !important;
+  }
+  .reading-column {
+    max-width: none !important;
+  }
+  .scripture-card,
+  .rounded-2xl {
+    border-color: #999 !important;
+    background: #fff !important;
+    box-shadow: none !important;
+  }
+  .prose-blog,
+  .prose-blog p,
+  .reading-text {
+    color: #000 !important;
+  }
+  a {
+    color: #000 !important;
+    text-decoration: none !important;
+  }
+  [data-print-url]::after {
+    content: attr(data-print-url);
+    display: block;
+    margin-top: 1.5rem;
+    font-size: 10pt;
+    color: #444;
+  }
+  .animate-fade-in,
+  .animate-fade-in-slow {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
 }

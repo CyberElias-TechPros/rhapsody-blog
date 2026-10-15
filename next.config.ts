@@ -15,9 +15,21 @@ import { securityHeaders } from './lib/security-headers';
  */
 const workerDevUrl = process.env.WORKER_DEV_URL?.replace(/\/+$/, '');
 
+/**
+ * Identifies this build to the service worker: `PwaProvider` registers `/sw.js?v=<id>`, so each
+ * deploy installs a fresh worker that drops the previous build's static cache.
+ */
+const buildId =
+  (process.env.VERCEL_GIT_COMMIT_SHA ?? process.env.GITHUB_SHA ?? process.env.CF_PAGES_COMMIT_SHA ?? '').slice(0, 12) ||
+  Date.now().toString(36);
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+
+  env: {
+    NEXT_PUBLIC_BUILD_ID: buildId,
+  },
 
   // The sandbox preview (and Vercel preview URLs) hit the dev server from another origin.
   allowedDevOrigins: ['*.e2b.app', '*.vercel.app'],
@@ -27,13 +39,21 @@ const nextConfig: NextConfig = {
   },
 
   async headers() {
-    const headers = [{ source: '/(.*)', headers: securityHeaders }];
+    const headers = [
+      { source: '/(.*)', headers: securityHeaders },
+      // The worker script itself must always be revalidated, or browsers keep an old one for
+      // up to a day; the `?v=` query already makes each build's URL unique.
+      { source: '/sw.js', headers: [{ key: 'Cache-Control', value: 'no-cache, max-age=0' }] },
+    ];
     // Immutable hashed-asset caching is a production concern; Next warns that a custom
     // Cache-Control on /_next/static interferes with development, so it is skipped in dev.
     if (process.env.NODE_ENV === 'production') {
       headers.push(
         { source: '/_next/static/(.*)', headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }] },
-        { source: '/(favicon.ico|og.jpg)', headers: [{ key: 'Cache-Control', value: 'public, max-age=86400' }] }
+        {
+          source: '/(favicon.ico|icon.svg|icon-192.png|icon-512.png|icon-maskable-512.png|apple-touch-icon.png)',
+          headers: [{ key: 'Cache-Control', value: 'public, max-age=86400' }],
+        }
       );
     }
     return headers;

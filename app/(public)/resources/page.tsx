@@ -9,7 +9,7 @@ import { getResourceGroups, getResourceStats } from '@/lib/resources';
 import { SITE } from '@/lib/site';
 
 export const metadata: Metadata = {
-  title: 'Books and resources',
+  title: 'Books and Resources by Pastor Chris Oyakhilome',
   description: `Books, studies, sermon notes and prayer-programme guides by ${SITE.author} and LoveWorld — published in full, searchable, and readable aloud.`,
   alternates: { canonical: '/resources' },
 };

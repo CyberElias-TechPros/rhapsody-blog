@@ -1,5 +1,5 @@
 /**
- * Meaning API — Cloudflare Worker entry.
+ * Rhapsody of Realities API — Cloudflare Worker entry (formerly the "Meaning" API).
  *
  * Request pipeline:
  *   request-id → CORS (preflight) → auth resolution (JWT→user row, when header present) →

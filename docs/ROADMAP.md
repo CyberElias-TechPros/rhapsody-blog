@@ -145,8 +145,46 @@ Every reason not to send is a value, not an exception: no provider configured, n
 `SITE_URL`, `/api/today` unreachable, no article for the day, nobody subscribed. The list keeps
 growing in D1 either way, so switching email on later is `wrangler secret put`, not a migration.
 
-### 7. Smaller things that were wrong
+### 7. The site was named for nothing anyone searches, and readers had no tools of their own
 
+**The gap.** The site was called "Devotional" — a word nobody types — while every search for the
+content says "Rhapsody of Realities" and a date. Article titles led with neither. The share image
+on every page still said "Meaning. Telegram channels, reborn as a blog", the favicon was a
+scaffolding tool's logo, there was no privacy policy (AdSense requires one), no contact page, and
+nothing the reader did — beyond bookmarking — was remembered.
+
+**Built.**
+
+| Piece | Where |
+| --- | --- |
+| Renamed to **Rhapsody of Realities** (short name "Rhapsody"), with an "independent reader site" disclaimer in the footer, About, FAQ and terms | `lib/site.ts`, `components/layout/Footer.tsx` |
+| Search copy in one place: titles that lead with series + date ("Rhapsody of Realities 15 October 2026: …", "… TeeVo …"), descriptions, keywords, `pageMetadata()` that never drops the share image | `lib/seo.ts` |
+| Structured data: `WebSite` + publication, `Article` with dated headline, `BreadcrumbList`, `CollectionPage`/`ItemList`, `FAQPage` | `lib/seo.ts`, every page |
+| Landing pages for what people search: `/teevo`, `/early-readers`, `/calendar`, `/bible` + 47 book pages, `/faq` | `app/(public)/…`, `components/hubs/AudienceHub.tsx` |
+| Per-devotional share cards (853, prerendered) and a new site card; Fraunces/Inter WOFF bundled for the renderer | `app/og/devotionals/[slug]/route.tsx`, `app/og.png/route.tsx`, `lib/og/card.tsx`, `assets/fonts/` |
+| Favicon, PNG app icons, maskable icon and Apple touch icon generated from the book mark | `scripts/generate-icons.mjs` (`npm run icons`) |
+| Privacy policy (incl. the AdSense cookie disclosures and opt-outs), terms, contact (mailto or prefilled GitHub issue) | `app/(public)/privacy`, `terms`, `contact` |
+| Reader data, all local: history + resume point, streaks, notes, Bible-plan ticks, reading settings, recent searches, export/import/delete | `lib/reader-data.ts`, `lib/local-store.ts`, `/me` |
+| Reading tools: progress bar, "continue where you left off", Aa settings (size, typeface incl. Atkinson Hyperlegible, spacing, width), sepia theme, focus mode, print stylesheet, mark as read | `components/reader/*`, `app/globals.css` |
+| Sharing: WhatsApp/Telegram/Facebook/X/email/SMS, copy the whole day WhatsApp-formatted, verse images drawn on canvas | `components/reader/ShareMenu.tsx`, `lib/share-text.ts`, `lib/verse-image.ts` |
+| Scripture references link to BibleGateway in the reader's translation | `lib/bible.ts`, `components/reader/ScriptureText.tsx` |
+| Daily reminder as a calendar event (`.ics` / Google Calendar) | `lib/reminders.ts`, `components/reader/ReminderDialog.tsx` |
+| Edition preference (Adults / TeeVo / Early Readers) remembered in a cookie, so the server renders the right one | `lib/audience-pref.ts`, home, `/today`, `/random` |
+| Offline: service worker (network-first pages, cached assets), `/offline` with the saved list, "Save for offline" per edition, install prompt | `public/sw.js`, `components/pwa/*` |
+| Keyboard shortcuts (`?`), back-to-top, offline banner, breadcrumbs, "Surprise me" (`/random`), jump to a date (`/go/yyyy-mm-dd`) | `components/common/*`, `app/random`, `app/go/[date]` |
+| User stories, flows and business rules, mapped to code and tests | `docs/USER-FLOWS.md` |
+
+### 8. Smaller things that were wrong
+
+- **The share image, the favicon and the unsubscribe page carried other names.** `public/og.jpg`
+  read "Meaning. Telegram channels, reborn as a blog" on every shared link; `favicon.ico` was a
+  scaffolding tool's logo; the Worker's unsubscribe page said "the Meaning digest". All replaced,
+  and `tests/brand.test.ts` keeps them from returning.
+- **The RSS feed published the whole month on the day it was deployed** — it was built from every
+  extracted day, including ones that had not arrived. It now carries released days only and is
+  regenerated hourly. (`app/feed.xml/route.ts`, `tests/feed-route.test.ts`)
+- **The navigation overflowed between 768 and 1024 px** (six links, a wordmark and two buttons in
+  768 px). Links now appear from 1024 px, with a "More" menu; smaller screens use the sheet.
 - **`public/robots.txt` shadowed `app/robots.ts`** and told every crawler the sitemap was at
   `https://meaning-api.YOUR_SUBDOMAIN.workers.dev/sitemap.xml` — a placeholder from an earlier
   project. The static file is gone; the generated one (which also disallows `/account`, `/admin`,
@@ -189,46 +227,48 @@ is documented in `.env.example` (frontend) or `worker/.dev.vars.example` (Worker
 | `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` (Worker) | Accounts and the admin screens stay off | Sign-in, bookmarks in the cloud, moderation |
 | `SITE_URL`, `EMAIL_API_URL`, `EMAIL_API_KEY`, `EMAIL_FROM` (Worker) | Addresses are collected and stored, nothing is sent | The daily email at 05:00 site time |
 | `NEXT_PUBLIC_SITE_URL` | Canonical URLs and the sitemap use the deploy's own origin | Canonical URLs and the sitemap use the real domain |
+| `NEXT_PUBLIC_CONTACT_EMAIL` | `/contact` opens a prefilled issue on the public GitHub repository | `/contact` shows the address and the form opens the reader's email app |
 
 ---
 
 ## What is still owed, in the order it should be done
 
-1. **Set the production values and deploy.** `NEXT_PUBLIC_SITE_URL`, the Worker's `SITE_URL` and
-   `ALLOWED_ORIGINS` (the production domain), and the four email variables. This is configuration,
-   not code — everything reads from the environment already, and each unset value degrades to a
-   behaviour that is documented above rather than to a crash.
-2. **Send one digest to one address before the cron does.** `SITE_URL` + `EMAIL_*` set, subscribe a
+1. **Set the production values and deploy.** `NEXT_PUBLIC_SITE_URL` (the real domain — canonical
+   URLs, the sitemap and every share card's absolute URL depend on it), `NEXT_PUBLIC_CONTACT_EMAIL`,
+   the Worker's `SITE_URL` and `ALLOWED_ORIGINS`, and the four email variables. Configuration, not
+   code: each unset value degrades to documented behaviour rather than a crash.
+2. **Tell the search engines.** Verify the domain in Google Search Console and Bing Webmaster
+   Tools, submit `/sitemap.xml`, and request indexing for `/`, `/teevo`, `/early-readers`,
+   `/editions` and `/faq`. Rankings for "rhapsody of realities today" are decided over weeks, by
+   how quickly the new day is indexed each morning — watch the Coverage and Performance reports.
+3. **Turn on Google's consent message for EEA/UK visitors** (AdSense → Privacy & messaging). A
+   Google-certified CMP is required there for personalised ads; the privacy policy already says so.
+4. **Send one digest to one address before the cron does.** `SITE_URL` + `EMAIL_*` set, subscribe a
    test address, trigger the cron (`wrangler cron trigger meaning-api "0 4 * * *"`) and read what
-   arrives in a real inbox. Gmail, Outlook and Apple Mail each render HTML differently, and the
-   only way to find that out is to look.
-3. **Per-article Open Graph images.** A shared link currently previews the site card, not the day's
-   article. This needs the brand fonts available at build time as binaries (`next/font/google`
-   cannot be used — builds here run offline), then an image route or a build step. Worth doing:
-   shared devotionals are how this site grows.
-4. **A resources feed.** `feed.xml` carries the daily devotionals, which is what a feed reader
-   wants from a daily site; books are irregular enough that a second feed
-   (`/resources-feed.xml`) is the right shape rather than mixing them in.
-5. **Bookmarks in the cloud for signed-in readers.** `/library` is per-device by design, and that
-   is right for most readers — but somebody who signs in on two devices expects their shelf to
-   follow them. The Worker already has a `bookmarks` table; what is missing is a merge on sign-in
-   (local slugs POSTed once, server list adopted thereafter) and a "your shelf is on this device"
-   note where it applies.
-6. **In-book search.** Books are matched on title, subject and summary because shipping 400 KB of
-   prose to a phone so one query can look inside it is the wrong trade on the connection this site
-   is built for. The honest next step is a server-side search endpoint over the resource bodies,
-   not a bigger client bundle.
-7. **A "continue reading" position.** The player remembers where it stopped within a session;
-   remembering across days (last article opened, last paragraph listened to) is a small
-   `localStorage` addition with a disproportionate effect on a daily habit.
-8. **One page per chapter for the longest books.** *The Power of Your Mind* is a whole book on one
-   page: 23,700 words, 696 KB of HTML before compression. The parts make it navigable and the player
-   steps through them, but a 2G connection wants the chapter it asked for and nothing else. The
-   parts are already computed in `lib/resources.ts`, so `/resources/[slug]/[part]` is a route and a
-   change of `generateStaticParams`, not a re-extraction.
-9. **Analytics that are not ad-tech.** Cloudflare Insights is loaded; nothing reads it. A weekly
-   note of which editions, audiences and books are actually read would tell the maintainer what to
-   extract next — and the corpus is the product.
+   arrives in a real inbox. (The Worker keeps its deployed name `meaning-api`; renaming a deployed
+   Worker creates a second one, so do it only with a planned cut-over.)
+5. **Permission from the publisher.** The site republishes full copyrighted text with attribution.
+   Written permission from LoveWorld Publishing removes the largest legal and AdSense risk
+   ("republished content" is a common rejection reason) — the reader tools added here are the
+   "unique value" AdSense reviewers look for, but they do not replace a licence.
+6. **Sync for signed-in readers.** Notes, history, streaks and plan ticks are per-device by design.
+   Somebody who signs in on two devices expects them to follow: extend the Worker's `bookmarks`
+   pattern to a single `reader_data` JSON document per user (last-write-wins per key, merged on
+   sign-in). The export/import format in `/me` is already that document.
+7. **Push notifications** (optional, on top of calendar reminders): VAPID keys, a
+   `push_subscriptions` table and a 05:00 sender in the Worker's existing cron.
+8. **Other languages.** The publisher translates into thousands of languages; French
+   ("Rhapsodie des Réalités") is the obvious first. It needs the PDFs, an extraction pass per
+   language, `/fr/...` routes and `hreflang` alternates.
+9. **A resources feed and per-audience feeds** (`/teevo/feed.xml`), so teens and parents can
+   subscribe to their edition.
+10. **In-book search** — a server-side endpoint over resource bodies rather than a bigger bundle.
+11. **One page per chapter for the longest books** (`/resources/[slug]/[part]`).
+12. **Analytics that are not ad-tech, and error reporting.** Cloudflare Insights is loaded and
+    unread; a weekly look at which editions, hubs and searches are used decides what to build and
+    extract next. Client errors are currently only logged to the console.
+13. **End-to-end tests in CI.** The component tests run in jsdom; a Playwright job (CI can download
+    browsers) should cover install, offline and the share sheet on a real Chromium.
 
 ---
 
@@ -250,7 +290,15 @@ is documented in `.env.example` (frontend) or `worker/.dev.vars.example` (Worker
   Insights. The ~130 "Tracking Prevention blocked access to storage" lines a browser console shows
   are the browser's own tracking protection and cannot be fixed from the site.
 - **No `next/font/google`.** Builds run offline here, so fonts stay a runtime `<link>`. This looks
-  like a gap in a Lighthouse trace and is a constraint.
+  like a gap in a Lighthouse trace and is a constraint. (The share-card renderer needs font binaries
+  at build time, so `assets/fonts/` carries four OFL-licensed WOFF files for that alone.)
+- **No keyword stuffing, hidden text or doorway pages.** The search terms are in titles, headings,
+  descriptions, structured data, link text and pages that answer the query (`/teevo`,
+  `/editions/2026-10`, `/faq`, `/bible/romans`). Repeating them in hidden or boilerplate text is a
+  spam-policy violation that demotes a site — the opposite of the goal.
+- **No hosting of the official PDFs.** The monthly PDFs are the publisher's product (sold in print
+  and as e-books). Edition pages answer "… PDF" searches honestly: every day to read here, and a
+  link to the official edition.
 
 ---
 

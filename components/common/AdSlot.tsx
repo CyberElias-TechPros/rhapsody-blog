@@ -62,9 +62,11 @@ export function AdSlot({
   return (
     <div
       ref={wrapper}
-      className={cn('w-full', className)}
+      // `ad-slot` lets focus mode and print hide every unit without knowing where they are.
+      className={cn('ad-slot w-full', className)}
       style={{ minHeight }}
       aria-label="Advertisement"
+      data-focus-hide=""
     >
       {label && (
         <p className="mb-1 text-[10px] uppercase tracking-[0.14em] text-muted-foreground/70 select-none">

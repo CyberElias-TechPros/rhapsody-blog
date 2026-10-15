@@ -53,6 +53,7 @@ export function SaveButton({
       type="button"
       onClick={onClick}
       aria-pressed={saved}
+      data-shortcut="save"
       className={cn(
         'inline-flex items-center gap-2 px-3 py-2 rounded-md border text-sm font-medium transition-colors',
         saved

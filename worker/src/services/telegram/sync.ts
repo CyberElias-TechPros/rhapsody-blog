@@ -36,7 +36,7 @@ export async function fetchChannelMessages(username: string): Promise<Awaited<Re
   const url = `https://t.me/s/${encodeURIComponent(username)}`;
   const res = await fetch(url, {
     headers: {
-      'user-agent': 'Mozilla/5.0 (compatible; MeaningBot/1.0; +https://github.com/rhapsody-blog)',
+      'user-agent': 'Mozilla/5.0 (compatible; RhapsodyBot/1.0; +https://github.com/CyberElias-TechPros/rhapsody-blog)',
       'accept-language': 'en',
     },
     signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),

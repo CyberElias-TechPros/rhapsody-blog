@@ -3,12 +3,15 @@
 /**
  * Client-side context stack for the whole app:
  *
- * - ThemeProvider (next-themes) — the dark palette in `app/globals.css`.
+ * - ThemeProvider (next-themes) — light, sepia and dark palettes in `app/globals.css`.
  * - AudioProvider — narration playback. It sits *above* the router content so a devotional keeps
  *   being read aloud while the reader moves between pages, and `PlayerDock` renders the control
  *   that goes with it.
  * - QueryClientProvider + AuthProvider — only the Worker-backed screens (account, admin,
  *   newsletter) use them; the blog content is rendered on the server from Markdown.
+ *
+ * - Site-wide reader features that need no server: reading settings sync, keyboard shortcuts,
+ *   back-to-top, the offline banner and the service worker / install prompt (`PwaProvider`).
  *
  * Keeping this in one client component means `app/layout.tsx` stays a server component.
  */
@@ -20,6 +23,11 @@ import { Toaster } from '@/components/ui/sonner';
 import { AuthProvider } from '@/auth/AuthProvider';
 import { AudioProvider, useAudio } from '@/components/audio/AudioProvider';
 import { PlayerDock } from '@/components/audio/PlayerDock';
+import { BackToTop } from '@/components/common/BackToTop';
+import { KeyboardShortcuts } from '@/components/common/KeyboardShortcuts';
+import { OfflineBanner } from '@/components/pwa/OfflineBanner';
+import { PwaProvider } from '@/components/pwa/PwaProvider';
+import { ReadingPrefsSync } from '@/components/reader/ReadingPrefsSync';
 
 /**
  * Toasts live bottom-right, which is exactly where the player dock sits once something is being
@@ -58,13 +66,24 @@ export function Providers({ children }: { children: ReactNode }) {
   );
 
   return (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      themes={['light', 'sepia', 'dark']}
+      disableTransitionOnChange
+    >
       <AudioProvider>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
             {children}
             <PlayerDock />
             <AppToaster />
+            <ReadingPrefsSync />
+            <KeyboardShortcuts />
+            <BackToTop />
+            <OfflineBanner />
+            <PwaProvider />
           </AuthProvider>
         </QueryClientProvider>
       </AudioProvider>

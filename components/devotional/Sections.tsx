@@ -1,4 +1,6 @@
 import { BookMarked, BookOpen, HandHeart, Layers, Megaphone } from 'lucide-react';
+import { PlanCheck } from '@/components/reader/PlanCheck';
+import { ScriptureText } from '@/components/reader/ScriptureText';
 import type { Devotional, DevotionalSection } from '@/lib/types';
 
 /**
@@ -17,7 +19,9 @@ export function ScriptureCard({ text, reference }: { text: string; reference?: s
       <blockquote className="scripture-card">
         <p>{text}</p>
         {reference && (
-          <footer className="mt-3 not-italic font-sans text-sm text-muted-foreground">— {reference}</footer>
+          <footer className="mt-3 not-italic font-sans text-sm text-muted-foreground">
+            — <ScriptureText text={reference} />
+          </footer>
         )}
       </blockquote>
     </figure>
@@ -35,7 +39,7 @@ export function ClosingCard({ label, text }: { label: Devotional['prayerLabel'];
         <HandHeart className="w-3.5 h-3.5" aria-hidden="true" /> {label}
       </h2>
       <div className="rounded-2xl border border-primary/20 bg-primary/5 px-6 py-5">
-        <p className="font-serif text-lg italic leading-relaxed text-foreground/90">{text}</p>
+        <p className="reading-text font-serif text-lg italic leading-relaxed text-foreground/90">{text}</p>
       </div>
     </section>
   );
@@ -54,7 +58,7 @@ export function ExtraSectionCard({ section }: { section: DevotionalSection }) {
       <h2 className="flex items-center gap-2 text-xs uppercase tracking-wider text-primary font-semibold mb-3 font-sans">
         <Icon className="w-3.5 h-3.5" aria-hidden="true" /> {section.label.toLowerCase()}
       </h2>
-      <p className="rounded-2xl border border-border/70 bg-card px-6 py-4 text-base leading-relaxed">{section.text}</p>
+      <p className="reading-text rounded-2xl border border-border/70 bg-card px-6 py-4 text-base leading-relaxed">{section.text}</p>
     </section>
   );
 }
@@ -69,13 +73,37 @@ export function FurtherStudyCard({ references }: { references: string }) {
       >
         <BookOpen className="w-3.5 h-3.5" aria-hidden="true" /> Further study
       </h2>
-      <p className="rounded-2xl border border-border/70 bg-card px-6 py-4 text-base leading-relaxed">{references}</p>
+      <p className="reading-text rounded-2xl border border-border/70 bg-card px-6 py-4 text-base leading-relaxed">
+        <ScriptureText text={references} />
+      </p>
     </section>
   );
 }
 
-export function ReadingPlansCard({ oneYear, twoYear }: { oneYear: string; twoYear: string }) {
+export function ReadingPlansCard({
+  oneYear,
+  twoYear,
+  slug,
+  date,
+}: {
+  oneYear: string;
+  twoYear: string;
+  /** With a slug, each portion gets a "mark read" toggle that feeds the plan tracker. */
+  slug?: string;
+  date?: string;
+}) {
   if (!oneYear && !twoYear) return null;
+  const portion = (label: string, text: string, which: 'one' | 'two') => (
+    <div className="rounded-2xl border border-border/70 bg-card px-5 py-4">
+      <dt className="flex items-center justify-between gap-2 text-xs uppercase tracking-wide text-muted-foreground font-medium">
+        {label}
+        {slug && date ? <PlanCheck slug={slug} date={date} which={which} portion={text} /> : null}
+      </dt>
+      <dd className="mt-1.5 text-base font-medium leading-snug">
+        <ScriptureText text={text} />
+      </dd>
+    </div>
+  );
   return (
     <section aria-labelledby="reading-plans-heading" className="mt-6">
       <h2
@@ -85,18 +113,8 @@ export function ReadingPlansCard({ oneYear, twoYear }: { oneYear: string; twoYea
         <Layers className="w-3.5 h-3.5" aria-hidden="true" /> Bible reading plans
       </h2>
       <dl className="grid sm:grid-cols-2 gap-3">
-        {oneYear && (
-          <div className="rounded-2xl border border-border/70 bg-card px-5 py-4">
-            <dt className="text-xs uppercase tracking-wide text-muted-foreground font-medium">1-Year plan</dt>
-            <dd className="mt-1.5 text-base font-medium leading-snug">{oneYear}</dd>
-          </div>
-        )}
-        {twoYear && (
-          <div className="rounded-2xl border border-border/70 bg-card px-5 py-4">
-            <dt className="text-xs uppercase tracking-wide text-muted-foreground font-medium">2-Year plan</dt>
-            <dd className="mt-1.5 text-base font-medium leading-snug">{twoYear}</dd>
-          </div>
-        )}
+        {oneYear && portion('1-Year plan', oneYear, 'one')}
+        {twoYear && portion('2-Year plan', twoYear, 'two')}
       </dl>
     </section>
   );

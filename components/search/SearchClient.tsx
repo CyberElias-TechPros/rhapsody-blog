@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useMemo, useState, type FormEvent, type ReactNode } from 'react';
-import { BookOpen, CalendarDays, Search, SearchX } from 'lucide-react';
+import { BookOpen, CalendarDays, History, Search, SearchX, X } from 'lucide-react';
 import { AdSlot } from '@/components/common/AdSlot';
 import { AudienceBadge } from '@/components/common/AudienceBadge';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,8 @@ import { formatDateShort } from '@/lib/format';
 import { searchDocs, searchResourceDocs, type ResourceSearchDoc } from '@/lib/search';
 import { cn } from '@/lib/utils';
 import type { SearchDoc } from '@/lib/types';
+import { useHydrated, useLocalStore } from '@/hooks/useLocalStore';
+import { pushRecentSearch, searchesStore } from '@/lib/reader-data';
 
 const SUGGESTIONS = ['righteousness', 'Holy Spirit', 'Romans', 'prayer', 'born again', 'covenant'];
 
@@ -77,8 +79,13 @@ function SearchInner({
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   };
 
+  // Recent searches live on the device, like everything else the reader does here.
+  const recentSearches = useLocalStore(searchesStore);
+  const hydrated = useHydrated();
+
   const commit = (term: string) => {
     const q = term.trim();
+    if (q) searchesStore.update((list) => pushRecentSearch(list, q));
     const sp = new URLSearchParams(searchParams.toString());
     if (q) sp.set('q', q);
     else sp.delete('q');
@@ -116,6 +123,35 @@ function SearchInner({
           Search
         </Button>
       </form>
+
+      {hydrated && recentSearches.length > 0 && (
+        <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <span className="inline-flex items-center gap-1">
+            <History className="w-3.5 h-3.5" aria-hidden="true" /> Recent:
+          </span>
+          {recentSearches.map((term) => (
+            <button
+              key={term}
+              type="button"
+              onClick={() => {
+                setValue(term);
+                commit(term);
+              }}
+              className="px-2.5 py-1 rounded-full border border-border hover:border-primary/40 hover:text-primary transition-colors"
+            >
+              {term}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => searchesStore.clear()}
+            className="inline-flex items-center gap-1 px-2 py-1 rounded-full hover:text-destructive"
+            aria-label="Clear recent searches"
+          >
+            <X className="w-3 h-3" aria-hidden="true" /> Clear
+          </button>
+        </div>
+      )}
 
       <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
         <span>Try:</span>

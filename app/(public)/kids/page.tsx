@@ -2,13 +2,15 @@ import type { Metadata } from 'next';
 import { PageHeader } from '@/components/common/StateBlocks';
 import { KidsIssueCard, KidsOcrNote } from '@/components/kids/Sections';
 import { getAllIssues, getIssuesByYear, getKidsStats, getSummary } from '@/lib/kids';
-import { SITE } from '@/lib/site';
+import { pageMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
-  title: 'For Kids',
-  description: `Every issue of Rhapsody of Realities for Kids on ${SITE.name} — the magazine page by page, with the words of each page recovered from the print or read off the artwork.`,
-  alternates: { canonical: '/kids' },
-};
+export const metadata: Metadata = pageMetadata({
+  title: 'Rhapsody of Realities for Kids — Monthly Magazine Issues (RORK)',
+  description:
+    'Every issue of Rhapsody of Realities for Kids — the illustrated devotional magazine for young children, page by page, with the words of each page underneath. Plus Early Readers for ages 6–12.',
+  path: '/kids',
+  absolute: true,
+});
 
 /**
  * The kids' edition, one card per monthly issue. This is not the daily devotional: RORK is a comic
@@ -24,7 +26,7 @@ export default function KidsIndexPage() {
     <div className="container py-16 md:py-20">
       <PageHeader
         eyebrow="Rhapsody of Realities for Kids"
-        title="For Kids"
+        title="Rhapsody of Realities for Kids"
         subtitle={`${issues.length} monthly ${issues.length === 1 ? 'issue' : 'issues'} — ${stats.pages} pages of the edition written for children who are just learning to read the Word for themselves. Each issue is published page by page, with the words of every page underneath it.`}
       />
 

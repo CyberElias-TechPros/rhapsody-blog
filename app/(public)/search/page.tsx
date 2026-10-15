@@ -3,13 +3,14 @@ import { SearchClient } from '@/components/search/SearchClient';
 import { PageHeader } from '@/components/common/StateBlocks';
 import { getContentStats, getSearchIndex } from '@/lib/content';
 import { getResourceSearchIndex, getResourceStats } from '@/lib/resources';
-import { SITE } from '@/lib/site';
+import { pageMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
-  title: 'Search',
-  description: `Search every daily devotional on ${SITE.name} by title, word, scripture reference or date.`,
-  alternates: { canonical: '/search' },
-};
+export const metadata: Metadata = pageMetadata({
+  title: 'Search Rhapsody of Realities Devotionals',
+  description: `Search every Rhapsody of Realities daily devotional by title, word, scripture reference or date — adults, TeeVo and Early Readers.`,
+  path: '/search',
+  absolute: true,
+});
 
 /**
  * The corpus is small enough to ship a compact index to the browser (titles, excerpts, dates,

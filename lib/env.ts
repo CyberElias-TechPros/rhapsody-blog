@@ -110,6 +110,12 @@ export const OPTIONAL_INTEGRATIONS: OptionalIntegration[] = [
     fallback: '/api/tts answers 501 and the player uses the browser voice.',
   },
   {
+    key: 'NEXT_PUBLIC_CONTACT_EMAIL',
+    scope: 'public',
+    feature: 'A contact address on /contact (the form opens the reader’s email app)',
+    fallback: 'The contact form opens a prefilled issue on the public GitHub repository.',
+  },
+  {
     key: 'NEXT_PUBLIC_API_URL',
     scope: 'public',
     feature: 'Accounts, saved-library sync, admin console and newsletter sign-up',

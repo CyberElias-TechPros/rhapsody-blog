@@ -10,17 +10,20 @@ import { EmptyState, PageHeader } from '@/components/common/StateBlocks';
 import { Button } from '@/components/ui/button';
 import { getAllDevotionals, getEditions, queryDevotionals } from '@/lib/content';
 import { AUDIENCE_ORDER, AUDIENCES, audienceOrNull, type AudienceId } from '@/lib/audiences';
+import { pageMetadata } from '@/lib/seo';
 import { SITE } from '@/lib/site';
 import type { DevotionalSort } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 const PAGE_SIZE = 12;
 
-export const metadata: Metadata = {
-  title: 'All devotionals',
-  description: `Every daily devotional published on ${SITE.name} — newest first, filterable by audience and edition, and searchable.`,
-  alternates: { canonical: '/devotionals' },
-};
+export const metadata: Metadata = pageMetadata({
+  title: 'All Rhapsody of Realities Devotionals — Daily Devotional Archive',
+  description:
+    'Every Rhapsody of Realities daily devotional by Pastor Chris Oyakhilome — adults, TeeVo for teens and Early Readers — newest first, filterable by edition and month, and searchable.',
+  path: '/devotionals',
+  absolute: true,
+});
 
 type Search = Record<string, string | string[] | undefined>;
 
@@ -69,7 +72,7 @@ export default async function DevotionalsPage({ searchParams }: { searchParams: 
     <div className="container py-16 md:py-20">
       <PageHeader
         eyebrow={activeEdition ? activeEdition.audienceTitle : audience ? AUDIENCES[audience].label : 'The library'}
-        title={activeEdition ? `${activeEdition.postCount} devotionals` : 'Every daily devotional'}
+        title={activeEdition ? `${activeEdition.postCount} devotionals` : 'Every Rhapsody of Realities devotional'}
         subtitle={
           activeEdition
             ? `The complete ${activeEdition.title} edition — one article for each day it covers.`

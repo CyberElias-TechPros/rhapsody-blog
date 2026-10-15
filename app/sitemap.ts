@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next';
-import { getAllDevotionals, getEditions } from '@/lib/content';
+import { getAllDevotionals, getBibleBookIndex, getEditions } from '@/lib/content';
 import { getAllResources } from '@/lib/resources';
 import { getAllIssues } from '@/lib/kids';
 import { absoluteUrl } from '@/lib/site';
@@ -22,9 +22,26 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // The day's plans change daily, and so does the page that answers for them.
     { url: absoluteUrl('/reading-plans'), lastModified: now, changeFrequency: 'daily', priority: 0.7 },
     { url: absoluteUrl('/about'), lastModified: now, changeFrequency: 'monthly', priority: 0.4 },
-    // Not listed: `/today` (a redirect to a different article every day) and `/library`
-    // (a per-device page, marked noindex). Both would be duplicate or private URLs.
+    // The editions' own landing pages: today's TeeVo and Early Readers devotional, every day.
+    { url: absoluteUrl('/teevo'), lastModified: now, changeFrequency: 'daily', priority: 0.9 },
+    { url: absoluteUrl('/early-readers'), lastModified: now, changeFrequency: 'daily', priority: 0.8 },
+    { url: absoluteUrl('/calendar'), lastModified: now, changeFrequency: 'daily', priority: 0.6 },
+    { url: absoluteUrl('/bible'), lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
+    { url: absoluteUrl('/faq'), lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
+    { url: absoluteUrl('/contact'), lastModified: now, changeFrequency: 'yearly', priority: 0.2 },
+    { url: absoluteUrl('/privacy'), lastModified: now, changeFrequency: 'yearly', priority: 0.2 },
+    { url: absoluteUrl('/terms'), lastModified: now, changeFrequency: 'yearly', priority: 0.2 },
+    // Not listed: `/today`, `/random` and `/go/*` (redirects to articles that are listed), and
+    // the per-device pages `/library`, `/me` and `/offline` (all noindex).
   ];
+
+  // Devotionals grouped by the book of their opening scripture (`/bible/romans`, …).
+  const bookRoutes: MetadataRoute.Sitemap = getBibleBookIndex().map(({ book }) => ({
+    url: absoluteUrl(`/bible/${book.slug}`),
+    lastModified: now,
+    changeFrequency: 'monthly',
+    priority: 0.5,
+  }));
 
   // The kids' edition is an issue per page, not an article per day (see lib/kids.ts).
   const kidsRoutes: MetadataRoute.Sitemap = getAllIssues().map((issue) => ({
@@ -58,7 +75,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.6,
   }));
 
-  return [...staticRoutes, ...editionRoutes, ...kidsRoutes, ...resourceRoutes, ...postRoutes];
+  return [...staticRoutes, ...editionRoutes, ...bookRoutes, ...kidsRoutes, ...resourceRoutes, ...postRoutes];
 }
 
 export const dynamic = 'force-static';

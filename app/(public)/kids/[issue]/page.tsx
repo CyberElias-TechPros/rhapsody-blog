@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // The cover is a real page of the magazine, so it is the share image — no generated card needed.
   const cover = issue.pages[0]?.image ? absoluteUrl(issue.pages[0].image) : undefined;
   return {
-    title: issue.title,
+    title: { absolute: `Rhapsody of Realities for Kids ${issue.monthName} ${issue.year}: ${issue.title}` },
     description: issue.excerpt,
     keywords: [issue.series, issue.title, issue.monthName, String(issue.year), 'For Kids', 'RORK'],
     authors: [{ name: issue.author }],

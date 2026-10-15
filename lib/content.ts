@@ -23,6 +23,7 @@ import {
   type AudienceId,
 } from './audiences';
 import { addDaysIso, siteTimeZone, todayIso } from './time';
+import { BIBLE_BOOKS, bookOfReference, referenceSortKey, type BibleBook } from './bible';
 import type {
   AudienceGroup,
   Devotional,
@@ -170,6 +171,7 @@ function compareRecency(a: Devotional, b: Devotional): number {
 /** Test helper: drop the memoised corpus (e.g. after writing fixture files). */
 export function resetContentCache(): void {
   cache = null;
+  bookIndex = null;
 }
 
 export function getAllSlugs(): string[] {
@@ -508,4 +510,109 @@ export function getContentStats(): ContentStats {
       };
     }).filter((entry) => entry.posts > 0),
   };
+}
+
+/* ------------------------------------------------------------------ by Bible book */
+
+export interface BibleBookEntry {
+  book: BibleBook;
+  /** Every audience's days that open in this book. */
+  count: number;
+  byAudience: Partial<Record<AudienceId, number>>;
+}
+
+let bookIndex: Map<string, Devotional[]> | null = null;
+
+/** slug → devotionals whose opening scripture is in that book, in canonical verse order. */
+function getBookIndex(): Map<string, Devotional[]> {
+  if (bookIndex) return bookIndex;
+  const index = new Map<string, Devotional[]>();
+  for (const post of getAllDevotionals()) {
+    const book = bookOfReference(post.scriptureReference);
+    if (!book) continue;
+    const list = index.get(book.slug) ?? [];
+    list.push(post);
+    index.set(book.slug, list);
+  }
+  for (const list of index.values()) {
+    list.sort((a, b) => {
+      const [, ac, av] = referenceSortKey(a.scriptureReference);
+      const [, bc, bv] = referenceSortKey(b.scriptureReference);
+      return ac - bc || av - bv || (a.date < b.date ? 1 : a.date > b.date ? -1 : 0);
+    });
+  }
+  bookIndex = index;
+  return index;
+}
+
+/** The books that open at least one devotional, in canonical order (Genesis first). */
+export function getBibleBookIndex(): BibleBookEntry[] {
+  const index = getBookIndex();
+  return BIBLE_BOOKS.filter((book) => index.has(book.slug)).map((book) => {
+    const posts = index.get(book.slug)!;
+    const byAudience: Partial<Record<AudienceId, number>> = {};
+    for (const post of posts) byAudience[post.audience] = (byAudience[post.audience] ?? 0) + 1;
+    return { book, count: posts.length, byAudience };
+  });
+}
+
+/** Devotionals that open in a book (`romans`), chapter and verse order. */
+export function getDevotionalsByBook(slug: string): Devotional[] {
+  return getBookIndex().get(slug) ?? [];
+}
+
+/** The book a devotional opens in, and up to `limit` other days from the same book. */
+export function getSameBookDevotionals(post: Devotional, limit = 4): { book?: BibleBook; posts: Devotional[] } {
+  const book = bookOfReference(post.scriptureReference);
+  if (!book) return { posts: [] };
+  const posts = getDevotionalsByBook(book.slug)
+    .filter((other) => other.slug !== post.slug && other.audience === post.audience)
+    .slice(0, limit);
+  return { book, posts };
+}
+
+/* ------------------------------------------------------------------ calendar */
+
+/** One cell of the calendar: the day and the article for it, in one audience. */
+export interface CalendarDay {
+  date: string;
+  slug: string;
+  title: string;
+  scriptureReference: string;
+}
+
+/** Every `yyyy-mm` the corpus covers for an audience, oldest first. */
+export function getAvailableMonths(audience: AudienceId = DEFAULT_AUDIENCE): string[] {
+  const months = new Set(getDevotionalsByAudience(audience).map((post) => post.date.slice(0, 7)));
+  return [...months].sort();
+}
+
+/** One audience's days in a month, keyed by date. */
+export function getCalendarMonth(month: string, audience: AudienceId = DEFAULT_AUDIENCE): CalendarDay[] {
+  return getDevotionalsByAudience(audience)
+    .filter((post) => post.date.startsWith(`${month}-`))
+    .sort((a, b) => (a.date < b.date ? -1 : 1))
+    .map((post) => ({ date: post.date, slug: post.slug, title: post.title, scriptureReference: post.scriptureReference }));
+}
+
+/**
+ * The article for a date, in the audience asked for — or the closest released day when the
+ * corpus does not cover it. Backs `/go/[date]`, the "jump to a date" control.
+ */
+export function resolveDate(dateIso: string, audience: AudienceId = DEFAULT_AUDIENCE): Devotional | undefined {
+  const exact = getDevotionalForDate(dateIso, audience);
+  if (exact) return exact;
+  const all = getDevotionalsByAudience(audience); // newest first
+  return all.find((post) => post.date <= dateIso) ?? all[all.length - 1];
+}
+
+/** A released day chosen at random — "Surprise me". `random` is injectable for tests. */
+export function getRandomDevotional(
+  audience: AudienceId = DEFAULT_AUDIENCE,
+  today: string = todayIso(),
+  random: () => number = Math.random
+): Devotional | undefined {
+  const pool = getReleasedDevotionals(audience, today);
+  if (!pool.length) return undefined;
+  return pool[Math.min(pool.length - 1, Math.floor(random() * pool.length))];
 }
