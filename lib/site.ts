@@ -9,6 +9,8 @@
  * would mislead readers and breach AdSense's misrepresentation policy.
  */
 
+import { resolveSiteUrl } from './site-url';
+
 export const SITE = {
   name: 'Rhapsody of Realities',
   /** Home-screen label and tight spots (≤ 12 characters so launchers do not truncate it). */
@@ -16,8 +18,15 @@ export const SITE = {
   tagline: 'Daily Devotional by Pastor Chris Oyakhilome',
   description:
     'Read Rhapsody of Realities today — the daily devotional by Pastor Chris Oyakhilome: the message, opening scripture, prayer and confession, further study and the 1-year and 2-year Bible reading plans, with TeeVo for teens and the Early Readers and Kids editions. Free to read, listen to and share.',
-  /** Canonical origin. Falls back to localhost so `next build` and previews never emit a blank URL. */
-  url: (process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000').replace(/\/+$/, ''),
+  /**
+   * Canonical origin: `NEXT_PUBLIC_SITE_URL`, else Vercel's production domain, else localhost
+   * (see `lib/site-url.ts`). Inside a Next build `next.config.ts` has already inlined the resolved
+   * value as `NEXT_PUBLIC_SITE_URL`, so server and browser bundles agree.
+   */
+  url: resolveSiteUrl({
+    NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
+    VERCEL_PROJECT_PRODUCTION_URL: process.env.VERCEL_PROJECT_PRODUCTION_URL,
+  }),
   author: 'Pastor Chris Oyakhilome',
   series: 'Rhapsody of Realities',
   publisher: 'LoveWorld Publishing',
