@@ -4,7 +4,7 @@ import './globals.css';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { Providers } from '@/components/providers';
-import { SITE, absoluteUrl } from '@/lib/site';
+import { SITE, SITE_VERIFICATION, absoluteUrl } from '@/lib/site';
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
@@ -82,6 +82,14 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     // should honour it instead of jumping to the top instantly.
     <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
+        {/* Domain-ownership proofs (see `SITE_VERIFICATION`). These are plain tags, not
+            `metadata.verification`, because verifiers read the served <head>. On a dynamic
+            route such as the home page, Next streams metadata for any user agent outside its
+            short bot list, so a metadata tag only reaches <head> if it resolves before the shell
+            flushes. Tags written here are part of the shell and are always in <head>. */}
+        {Object.entries(SITE_VERIFICATION).map(([name, content]) => (
+          <meta key={name} name={name} content={content} />
+        ))}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         {/* eslint-disable-next-line @next/next/no-page-custom-font -- This IS the App Router's

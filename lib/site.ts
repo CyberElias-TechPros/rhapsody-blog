@@ -22,6 +22,18 @@ export const SITE = {
 } as const;
 
 /**
+ * Domain-ownership proofs for third-party services, as `<meta name>` → `content`. The root layout
+ * renders each one as a plain `<meta>` in the served `<head>` of every page, the home page
+ * included. Where a service also accepts a file, it sits in `public/` with the same value, and
+ * `tests/site-verification.test.ts` fails if the two drift apart or either one disappears. A
+ * service that re-checks and no longer finds its proof un-verifies the domain.
+ */
+export const SITE_VERIFICATION = {
+  // Okecbot. The same code is served as /okecbot-verification.txt.
+  'okecbot-site-verification': 'okb-bg6acdifhqi8y75xtkrtm5ucaymdwxua',
+} as const satisfies Record<string, string>;
+
+/**
  * The main navigation. "Today" comes first because it is the reason anyone opens the site, and
  * there is no "Home" item: the logo is the home link, and the bar has to fit six labels next to
  * a search box at 1024px. The mobile sheet adds Home back, where there is room for it.

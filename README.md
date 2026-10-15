@@ -457,8 +457,15 @@ deliberately *not* prerendered — they answer for the current day.
   switching email on later is a secret, not a migration. `ALLOWED_ORIGINS` must contain the
   deployed frontend origin or every browser call to the API is CORS-blocked.
 
-Two things worth knowing:
+Three things worth knowing:
 
+- **Site verification.** Domain-ownership codes live in `SITE_VERIFICATION` (`lib/site.ts`). The
+  root layout renders each one as a plain `<meta>` in the `<head>` of every page. Okecbot's code is
+  also served as `public/okecbot-verification.txt`. That file holds only the code, with no
+  trailing newline. These are plain tags rather than `metadata.verification` because Next streams
+  metadata on dynamic routes like the home page, so those tags may not be in the served `<head>`.
+  `tests/site-verification.test.ts` fails if the meta value and the file disagree, or if either
+  one disappears. To add another service, add one entry to `SITE_VERIFICATION`.
 - **Security headers** are applied in `next.config.ts` (carried over from the old `vercel.json`):
   HSTS, `X-Frame-Options: DENY`, `nosniff`, referrer and permissions policies, plus a CSP. The CSP
   keeps `'unsafe-inline'` for scripts and styles because the App Router emits inline RSC and
