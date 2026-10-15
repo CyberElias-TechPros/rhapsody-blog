@@ -176,6 +176,13 @@ nothing the reader did — beyond bookmarking — was remembered.
 
 ### 8. Smaller things that were wrong
 
+- **Production published `http://localhost:3000` as its own address.** With `NEXT_PUBLIC_SITE_URL`
+  unset on Vercel, robots.txt, every sitemap entry, the feed's links, every canonical and
+  `og:image` tag and the domain printed on the share cards all named localhost — invisible to a
+  reader, fatal to indexing and to link previews. An unset value now falls back to Vercel's
+  `VERCEL_PROJECT_PRODUCTION_URL` (the project's production domain); `next.config.ts` resolves it
+  once and inlines it for every bundle, and the build log warns if neither is available.
+  (`lib/site-url.ts`, `tests/site-url.test.ts`)
 - **The share image, the favicon and the unsubscribe page carried other names.** `public/og.jpg`
   read "Meaning. Telegram channels, reborn as a blog" on every shared link; `favicon.ico` was a
   scaffolding tool's logo; the Worker's unsubscribe page said "the Meaning digest". All replaced,
@@ -226,7 +233,7 @@ is documented in `.env.example` (frontend) or `worker/.dev.vars.example` (Worker
 | `NEXT_PUBLIC_ADSENSE_CLIENT` + slot ids | No ads, no empty boxes, no layout shift | Ads in the feed, under the article and at the foot of a page |
 | `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` (Worker) | Accounts and the admin screens stay off | Sign-in, bookmarks in the cloud, moderation |
 | `SITE_URL`, `EMAIL_API_URL`, `EMAIL_API_KEY`, `EMAIL_FROM` (Worker) | Addresses are collected and stored, nothing is sent | The daily email at 05:00 site time |
-| `NEXT_PUBLIC_SITE_URL` | Canonical URLs and the sitemap use the deploy's own origin | Canonical URLs and the sitemap use the real domain |
+| `NEXT_PUBLIC_SITE_URL` | On Vercel, every absolute URL uses the project's production domain (`VERCEL_PROJECT_PRODUCTION_URL`, its shortest custom domain); anywhere else, `http://localhost:3000` | Canonical URLs, share cards, the sitemap and the feed use exactly this origin |
 | `NEXT_PUBLIC_CONTACT_EMAIL` | `/contact` opens a prefilled issue on the public GitHub repository | `/contact` shows the address and the form opens the reader's email app |
 
 ---
@@ -234,9 +241,11 @@ is documented in `.env.example` (frontend) or `worker/.dev.vars.example` (Worker
 ## What is still owed, in the order it should be done
 
 1. **Set the production values and deploy.** `NEXT_PUBLIC_SITE_URL` (the real domain — canonical
-   URLs, the sitemap and every share card's absolute URL depend on it), `NEXT_PUBLIC_CONTACT_EMAIL`,
-   the Worker's `SITE_URL` and `ALLOWED_ORIGINS`, and the four email variables. Configuration, not
-   code: each unset value degrades to documented behaviour rather than a crash.
+   URLs, the sitemap and every share card's absolute URL depend on it; Vercel builds fall back to
+   the project's production domain, but setting it pins the domain if another is ever attached),
+   `NEXT_PUBLIC_CONTACT_EMAIL`, the Worker's `SITE_URL` and `ALLOWED_ORIGINS`, and the four email
+   variables. Configuration, not code: each unset value degrades to documented behaviour rather
+   than a crash.
 2. **Tell the search engines.** Verify the domain in Google Search Console and Bing Webmaster
    Tools, submit `/sitemap.xml`, and request indexing for `/`, `/teevo`, `/early-readers`,
    `/editions` and `/faq`. Rankings for "rhapsody of realities today" are decided over weeks, by

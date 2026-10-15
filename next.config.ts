@@ -1,5 +1,6 @@
 import type { NextConfig } from 'next';
 import { securityHeaders } from './lib/security-headers';
+import { LOCAL_ORIGIN, resolveSiteUrl } from './lib/site-url';
 
 /**
  * The blog itself is fully static: every devotional is a Markdown file in `content/devotionals`
@@ -23,12 +24,33 @@ const buildId =
   (process.env.VERCEL_GIT_COMMIT_SHA ?? process.env.GITHUB_SHA ?? process.env.CF_PAGES_COMMIT_SHA ?? '').slice(0, 12) ||
   Date.now().toString(36);
 
+/**
+ * The canonical origin, resolved once here, where the whole build environment is visible —
+ * including Vercel's `VERCEL_PROJECT_PRODUCTION_URL`, which a browser bundle could never read —
+ * and inlined below as `NEXT_PUBLIC_SITE_URL` so every bundle sees the same value.
+ */
+const siteUrl = resolveSiteUrl({
+  NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
+  VERCEL_PROJECT_PRODUCTION_URL: process.env.VERCEL_PROJECT_PRODUCTION_URL,
+});
+
+// A CI or deploy build that fell all the way back to localhost ships that address in every
+// canonical tag and share card, and nothing a visitor sees looks wrong, so say it in the build
+// log. Best effort: on Vercel these hints are system variables too, like the production domain.
+if (siteUrl === LOCAL_ORIGIN && (process.env.VERCEL || process.env.CI)) {
+  console.warn(
+    `⚠ NEXT_PUBLIC_SITE_URL is not set and no Vercel production domain is available: canonical URLs, ` +
+      `share cards, sitemap.xml and the feed will point at ${LOCAL_ORIGIN}. Fine for a CI check; wrong for a public deploy.`
+  );
+}
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
 
   env: {
     NEXT_PUBLIC_BUILD_ID: buildId,
+    NEXT_PUBLIC_SITE_URL: siteUrl,
   },
 
   // The sandbox preview (and Vercel preview URLs) hit the dev server from another origin.

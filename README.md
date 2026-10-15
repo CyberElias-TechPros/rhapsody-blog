@@ -487,7 +487,7 @@ The rewrite exists so the browser keeps talking to a single origin in developmen
 
 | Variable | Purpose |
 | --- | --- |
-| `NEXT_PUBLIC_SITE_URL` | Canonical origin for `og:url`, canonicals, `sitemap.xml` and the feed |
+| `NEXT_PUBLIC_SITE_URL` | Canonical origin for `og:url`, canonicals, share cards, `sitemap.xml`, `robots.txt` and the feed. Unset, Vercel builds use the project's production domain (`VERCEL_PROJECT_PRODUCTION_URL`) and other builds `http://localhost:3000` (`lib/site-url.ts`) |
 | `NEXT_PUBLIC_API_URL` | Deployed Worker API base, including `/api` |
 | `WORKER_DEV_URL` | Dev only — same-origin rewrites to a local `wrangler dev` |
 | `NEXT_PUBLIC_ADSENSE_CLIENT`, `NEXT_PUBLIC_ADSENSE_SLOT_*`, `NEXT_PUBLIC_ADS_ENABLED` | AdSense publisher id, per-position slot ids, and an on/off override |
